@@ -10,6 +10,9 @@ def center(mask):
     y = np.sum(mask*Y)/norm
     return x,y
 
+def radius(mask):
+    return np.sqrt(np.sum(mask)/np.pi)
+
 def circle(x,  x0,  y0, r ) :
     return np.sqrt( r**2 - (x-x0)**2) + y0
     

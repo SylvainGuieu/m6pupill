@@ -76,9 +76,25 @@ def plotMask(p, axes=None, fig=None):
     axes.imshow(mask, origin='lower');
     axes.set_title("az {az:.0f} derot {derot:.0f}".format(**p.header))
     xc, yc = p.getCenter();
-    axes.plot(xc, yc, 'k+');        
+    axes.plot(xc, yc, 'k+');
+    radius = p.getRadius();
+    alpha = np.linspace( 0, 2*pi, 50)
+    axes.plot( radius*np.cos(alpha)+xc, radius*np.sin(alpha)+yc, 'r-') 
+    
     return axes
 
+def plotDifMask(p1, p2, axes=None, fig=None):
+    axes, fig = getAxes(axes, fig)
+    m2 = p2.getMask()
+    m1 = p1.getMask()
+    dMask = m1*1-m2*1
+    norm = np.sum(m2)
+    prop = np.abs(np.sum(~dMask[m2])/norm)
+    
+    
+    axes.imshow(dMask, origin='lower');
+    axes.set_title("%.4f%%"%(prop*100))
+    return axes
 
 def plotRunOut(l, axes=None, fig=None, leg=None, title="",fit=False):    
     axes, fig = getAxes(axes, fig)
@@ -113,7 +129,9 @@ def plotRunOut(l, axes=None, fig=None, leg=None, title="",fit=False):
         alpha = np.linspace(0,2*np.pi, 100)
         axes.plot(  r*np.cos(alpha)+x0, r*np.sin(alpha)+y0,  'r-')  
         axes.plot( x0, y0,  'r*')
-        axes.set_title('{x0:.2f},  {y0:.2f} runout {d:.2f}'.format(x0=x0,y0=y0,r=r,d=r*2)) 
+        pupDiam = np.mean( [p.getRadius() for p in l])*2
+        runOut = r*2/pupDiam * 100
+        axes.set_title('{x0:.2f},  {y0:.2f} runout {d:.2f} / {pupDiam:.0f} pixels => {runOut:.2f}%'.format(x0=x0,y0=y0,r=r,d=r*2, pupDiam=pupDiam, runOut=runOut)) 
     return axes
 
 
@@ -147,18 +165,22 @@ def showfig(fig, always=False):
     
 def runPlot(l, p=None):
     if p is None: p = l[-1]
-    f = plotPupillCut(p, fig=CUTFIG)
-    showfig(f)
+    fig = plt.figure(CUTFIG); fig.clear()
+    plotPupillCut(p, fig=fig)
+    showfig(fig)
         
     for i,(derot,laz) in enumerate(l.byDerot().items()):
         fnum = (i+1)*10
+        fig = plt.figure(fnum); fig.clear()
         fig = plotRunOut(laz,fit=True,fig=fnum).figure
         showfig(fig)
+        
     for i,(derot,lderot) in enumerate(l.byAz().items()):
         fnum = (i+1)*100
+        fig = plt.figure(fnum); fig.clear()
         fig = plotRunOut(lderot,fit=False,fig=fnum).figure
         showfig(fig)
-    
+    plt.pause(0.5)
     
         
     

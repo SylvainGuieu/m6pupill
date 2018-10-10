@@ -1,3 +1,4 @@
+
 import re
 import os
 import numpy as np
@@ -23,7 +24,7 @@ class M6Pupill:
     _pupLocation  = None
     file = None
     def __init__(self, file=None, data=None, header=None):
-        self.header = {'az':-999.99,'derot':-999.99, 'at':0}               
+        self.header = {'az':-999.99,'derot':-999.99, 'at':config.getAt()}               
         header = {} if header is None else header
         
         if file is not None:
@@ -71,7 +72,10 @@ class M6Pupill:
 
     def getCenter(self):
         return compute.center(self.getMask())
-    
+
+    def getRadius(self):
+        return compute.radius(self.getMask())
+        
     def getMask(self):
         
         shape = self.data.shape
@@ -92,7 +96,7 @@ class M6Pupill:
         
         
         bckg = self.fluxTreshold * 0.95 if bckg is None else bckg
-        flux = p.mean(img[mask]) if flux is None else flux
+        flux = np.mean(img[mask]) if flux is None else flux
 
         flatImg =  img.copy()
         flatImg[mask]  = flux
@@ -168,6 +172,12 @@ class M6PupillList:
         
     def extend(self, iterable):
         self.lst.extend(iterable)
+
+    def sortedKey(self, k):
+        return self.__class__(sorted(self, key=lambda p, k=k: p.header[k]))  
+
+    def getRunout(self):
+        return compute.runout(self.getCenters())
     
     def byKey(self, key, nMin=1):
         items = {}
@@ -200,7 +210,7 @@ class M6PupillList:
             if p.az==az and p.derot==derot:
                 return p
         return None
-
+    
     def getCenters(self):
         return np.array([p.getCenter() for p in self])
     

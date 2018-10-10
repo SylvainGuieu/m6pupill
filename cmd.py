@@ -2,6 +2,7 @@ import ccs
 import sys
 import os
 from . import io 
+from . import config 
 ccs.CcsInit()
 ccdDefaultBuffer = {
     'DET.FRAM.FITSUNC':  "img.fits",
@@ -21,8 +22,14 @@ ccdDefaultBuffer = {
 
 ccdBuffer = dict()
 
-ccdEnv = "ccdconCI_ccdagfas"
-rotEnv = "mvdrotServer"
+ccdServer = "ccdconCI_ccdagfas"
+getCcdEnv = lambda : ""
+
+rotServer = "mvdrotServer"
+getRotEnv = lambda : "lat%dfsm"%config.getAt()
+
+azServer = "azServer"
+getAzEnv =  lambda : "lat%daz"%config.getAt()
 
 
 def buffer2param(buffer):
@@ -34,22 +41,22 @@ def buffer2param(buffer):
 
 def ccdSetup(buffer):
     #buffer = dict(buffer,**ccdBuffer)
-    return ccs.SendCommand("", ccdEnv, "SETUP", "-function "+buffer2param(buffer))
+    return ccs.SendCommand(getCcdEnv(), ccdServer, "SETUP", "-function "+buffer2param(buffer))
 
 def  ccdStart():
-    return ccs.SendCommand("", ccdEnv, "START")
+    return ccs.SendCommand(getCcdEnv(), ccdServer, "START")
 
 def ccdWait():
-    return ccs.SendCommand("", ccdEnv, "WAIT")
+    return ccs.SendCommand(getCcdEnv(), ccdServer, "WAIT")
 
 def ccdStop():
-    return ccs.SendCommand("", ccdEnv, "STOP")
+    return ccs.SendCommand(getCcdEnv(), ccdServer, "STOP")
 
 def ccdInit():
-    ccs.SendCommand("", ccdEnv, "SETUP", "-expoId -1 -file ccdSetupComplete.det")
+    ccs.SendCommand(getCcdEnv(), ccdServer, "SETUP", "-expoId -1 -file ccdSetupComplete.det")
 
 def ccdOnline():
-    ccs.SendCommand("", ccdEnv, "ONLINE")
+    ccs.SendCommand(getCcdEnv(), ccdServer, "ONLINE")
     
 def takeExposure(file='test.fits'):
     if file:
@@ -72,5 +79,7 @@ def getImage():
 
 
 def moveDerot(angle):
-    return ccs.SendCommand("", rotEnv, "SETDP", "%.0f"%angle)
+    return ccs.SendCommand(getRotEnv(), rotServer, "SETDP", "%.4f"%angle)
 
+def moveAz(angle):
+    return ccs.SendCommand(getAzEnv(), azServer, "PRESET", "abs,%.4f,600"%angle)
