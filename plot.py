@@ -22,13 +22,58 @@ def getFigure(fig):
         return figure(fig)
     else:
         return fig 
+
+def plotPupillCut(p, fig=None):
+    fig = getFigure(fig)
+    fig.clear()
+    fig, axes = plt.subplots(2,2, num=fig.number);
+    plotPupill(p, axes=axes[0][0])
+    plotCut(p, "y", axes=axes[0][1])
+    plotCut(p, "x", axes=axes[1][0])
+    plotMask(p, axes=axes[1][1])
+    return fig
+
+def plotCut(p,direction, slc=None, axes=None, fig=None):
+    axes, fig = getAxes(axes, fig)
+    data = p.data
+    c = p.getCenter()
+    direction = direction.lower()
+    if  len(direction)<2:
+        direction = direction+direction
+        
+    if slc is None:
+        slc = slice(0, None)
+    if direction[0]=="x":
+        data = data[int(c[1]),slc]
+    elif direction[0]=="y":
+        data = data[slc,int(c[0])]
+    else:
+        raise KeyError('unknown direction%s must be x or y'%direction)
+    if direction[1]=='x':
+        axes.plot(data,'k-')
+        axes.axhline(p.fluxTreshold, color='red')
+    else:
+        axes.plot(data, np.arange(len(data)), 'k-')
+        axes.axvline(p.fluxTreshold, color='red')
+    return axes
     
+    
+
+def plotPupill(p, axes=None, fig=None):
+    axes, fig = getAxes(axes, fig)
+    axes.imshow(p.data, origin='lower');
+    loc = p.pupLocation
+    x = [loc[0][0], loc[1][0],  loc[1][0], loc[0][0], loc[0][0]]
+    y = [loc[0][1], loc[0][1], loc[1][1], loc[1][1], loc[0][1]]
+    axes.plot( x,  y, 'k-')    
+    return axes
+
+
 def plotMask(p, axes=None, fig=None):
     axes, fig = getAxes(axes, fig)
-    
-    
+        
     mask = p.getMask()
-    axes.imshow(mask);
+    axes.imshow(mask, origin='lower');
     axes.set_title("az {az:.0f} derot {derot:.0f}".format(**p.header))
     xc, yc = p.getCenter();
     axes.plot(xc, yc, 'k+');        
@@ -62,7 +107,7 @@ def plotRunOut(l, axes=None, fig=None, leg=None, title="",fit=False):
     
     for p,c in zip(l, centers):
         axes.text(  c[0],c[1], fmt.format(**p.header))
-    if fit:
+    if fit and len(l)>=3:
         (x0,y0), r = compute.runout(centers)
         
         alpha = np.linspace(0,2*np.pi, 100)
@@ -83,6 +128,39 @@ def plotMasks(l, fig=None):
     return fig
     
 
+CUTFIG = 1
 
+shownFigure= set()
+def runPlotStart():
+    global shownFigure
+    plt.figure(CUTFIG).show()
+    shownFigure= set([CUTFIG])
+
+def showfig(fig, always=False):
+    global shownFigure
+    if fig.number not in shownFigure:
+        fig.show()
+        shownFigure.add(fig.number)
+    elif always:
+       fig.show()
+    fig.canvas.draw()
+    
+def runPlot(l, p=None):
+    if p is None: p = l[-1]
+    f = plotPupillCut(p, fig=CUTFIG)
+    showfig(f)
+        
+    for i,(derot,laz) in enumerate(l.byDerot().items()):
+        fnum = (i+1)*10
+        fig = plotRunOut(laz,fit=True,fig=fnum).figure
+        showfig(fig)
+    for i,(derot,lderot) in enumerate(l.byAz().items()):
+        fnum = (i+1)*100
+        fig = plotRunOut(lderot,fit=False,fig=fnum).figure
+        showfig(fig)
+    
+    
+        
+    
 
 

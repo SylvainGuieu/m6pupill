@@ -5,6 +5,7 @@ import numpy as np
 from . import compute 
 from . import io
 from . import config
+from . import cmd
 
 from scipy.ndimage.interpolation import shift
 import glob
@@ -33,7 +34,13 @@ class M6Pupill:
             self.data = data
 
         self.header = dict(self.header, **header)
-    
+    @classmethod
+    def fromCcd(cl, header=None):
+        data, h = cmd.getImage()
+        header = h if header is None else dict(header, **h)
+        
+        return cl(data=data, header=header)
+            
     @property
     def at(self):
         return self.header['at']
@@ -100,6 +107,65 @@ class M6PupillList:
     def append(self, p):
         self.lst.append(p)
 
+    def appendFromCcd(self, header=None):
+        self.append(M6Pupill.fromCcd(header=header))
+
+    def askNew(self,  az=None, derot=None):
+        
+        if not len(self) or self[-1].at<1:
+            atnum = input('at number = ').strip()
+            if atnum=="q":
+                return False
+            try:
+                at =int(atnum)
+            except Exception:
+                print ('what ?')
+                return self.askNew(az=az,derot=derot)            
+
+            
+        else:
+            at = self[-1].at
+
+        
+        if az is  None  and derot is None:
+            newdef = input('az derot (q to quit)= ').strip()
+            if newdef =="q":
+                return False
+        
+            strval = [s.strip() for s in newdef.split(" ")]
+            if len(strval)!=2:
+                print('what ?')
+                return  self.askNew(az=az,derot=derot)
+            else:
+                self.appendFromCcd(header={'az':float(strval[0]), 'derot':float(strval[1]), 'at':at})
+        elif az is None:
+           newdef = input('az (q to quit)= ').strip()
+           if newdef =="q":
+                return False
+           strval = [s.strip() for s in newdef.split(" ")]
+           if len(strval)!=1:
+                print('what ?')
+                return  self.askNew(az=az,derot=derot)
+           else:
+                self.appendFromCcd(header={'az':float(strval[0]), 'derot':derot, 'at':at}) 
+        elif derot is None:
+           newdef = input('derot (q to quit)= ').strip()
+           if newdef =="q":
+                return False
+           strval = [s.strip() for s in newdef.split(" ")]
+           if len(strval)!=1:
+                print('what ?')
+                return  self.askNew(az=az,derot=derot)
+           else:
+                self.appendFromCcd(header={'derot':float(strval[0]), 'derot':az, 'at':at})
+        else:
+            newdef = input('q to quit enter to take new expo ').strip()
+            if newdef =="q":
+                return False
+            else:
+                self.appendFromCcd(header={'derot':derot, 'derot':az, 'at':at})
+        return True
+        
     def extend(self, iterable):
         self.lst.extend(iterable)
     
@@ -129,8 +195,8 @@ class M6PupillList:
     def increasingDerot(self):
         return self.increasingKey('derot')
 
-    def find(self, az, derot):
-        for P in self.lst:
+    def find(self, az=0.0, derot=0.0):
+        for p in self.lst:
             if p.az==az and p.derot==derot:
                 return p
         return None

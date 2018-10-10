@@ -24,7 +24,16 @@ def readFitsData(file):
      data = fh.data.copy()     
      return data, header
  
+def saveList(l, prefix=""):
+    return [savePup(p,prefix=prefix) for p in l]
 
+def savePup(p, prefix=""):
+    h = dict(p.header,prefix=prefix)
+    file = os.path.join(detdata(), "{prefix}AT{at:d}_Az{az:03.0f}_Derot{derot:03.0f}.fits".format(**h))
+    fh = fits.HDUList([fits.PrimaryHDU(p.data)])
+    fh.writeto(file, overwrite=True)
+    return file
+    
 
 
 

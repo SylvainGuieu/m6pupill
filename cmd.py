@@ -22,6 +22,7 @@ ccdDefaultBuffer = {
 ccdBuffer = dict()
 
 ccdEnv = "ccdconCI_ccdagfas"
+rotEnv = "mvdrotServer"
 
 
 def buffer2param(buffer):
@@ -57,6 +58,19 @@ def takeExposure(file='test.fits'):
     ccdWait();    
     return os.path.join(io.detdata(), file)
 
+def getImage():    
+    ccdSetup({'DET.FRAM.FITSUNC':'_tmpimg.fits',  'DET.FRAM.FITSMTD': 2})
+    ccdStart();
+    ccdWait();
+    file = os.path.join(io.detdata(), '_tmpimg.fits')
+    fh = io.fits.open(file)
+    data = fh[0].data.copy()
+    header = fh[0].header.copy()
+    fh.close()
+    os.remove(file);
+    return data, header
 
-    
+
+def moveDerot(angle):
+    return ccs.SendCommand("", rotEnv, "SETDP", "%.0f"%angle)
 
