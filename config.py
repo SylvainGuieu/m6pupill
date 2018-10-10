@@ -15,3 +15,10 @@ def getAt():
         return defaultAt
 
 
+headerDef = {
+    'az':('AZ', float, '[deg]Azimuth position'),
+    'derot':('DEROT', float, '[deg] Derotator position'),
+    }
+keyLoockup = {d[0]:k for k,d in headerDef.items()}
+
+    

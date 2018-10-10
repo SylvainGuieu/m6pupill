@@ -60,7 +60,7 @@ def runDerot(l=None, angles=None, prefix="", az=None):
         log("rotating to Derotator %.1f "%angle, end="...")
         cmd.moveDerot(angle)
         log ("ok")
-        l.appendFromCcd(header={'derot':angle, 'az':az})
+        l.appendFromCcd(header={'derot':cmd.getDerotPos(), 'az':cmd.getAzPos()})
         log("image saved", io.savePup(l[-1], prefix=prefix))
         plot.runPlot(l)
     return l
@@ -83,10 +83,11 @@ def runAz(l=None, angles=None, prefix="", derot=None):
         log("rotating Az to %.1f "%angle, end="...")
         cmd.moveAz(angle)
         log ("ok")
-        l.appendFromCcd(header={'az':angle, 'derot':derot})
+        l.appendFromCcd(header={'derot':cmd.getDerotPos(), 'az':cmd.getAzPos()})
         log("image saved", io.savePup(l[-1], prefix=prefix))
         plot.runPlot(l)
     return l
+
 
 
 def runAlign(refPupill, pause=1):

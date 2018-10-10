@@ -2,7 +2,8 @@ import ccs
 import sys
 import os
 from . import io 
-from . import config 
+from . import config
+import math
 ccs.CcsInit()
 ccdDefaultBuffer = {
     'DET.FRAM.FITSUNC':  "img.fits",
@@ -30,6 +31,18 @@ getRotEnv = lambda : "lat%dfsm"%config.getAt()
 
 azServer = "azServer"
 getAzEnv =  lambda : "lat%daz"%config.getAt()
+
+azDbParams = {
+    'pos':':Appl_data:TCS:LCU:az:altaz:POSLOOP.pos'
+}
+
+rotDbControlPoint = '<alias>mvdrot:control:motor:motorD:motor'
+rotDbParams = {
+    'posUser': rotDbControlPoint+".posUser",
+    'state': '<alias>mvdrot.state',
+    'substate': '<alias>mvdrot.substate'
+    }
+
 
 
 def buffer2param(buffer):
@@ -83,3 +96,11 @@ def moveDerot(angle):
 
 def moveAz(angle):
     return ccs.SendCommand(getAzEnv(), azServer, "PRESET", "abs,%.4f,600"%angle)
+
+def getDerotPos():
+    return ccs.DbRead(rotDbParams['posUser'])
+
+def getAzPos():
+    return ccs.DbRead(azDbParams['pos'])*180/math.pi
+
+

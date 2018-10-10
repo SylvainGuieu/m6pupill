@@ -6,7 +6,10 @@ import numpy as np
 from . import compute 
 from . import io
 from . import config
-from . import cmd
+try:
+    from . import cmd
+except Exception:
+    print('No css')
 
 from scipy.ndimage.interpolation import shift
 import glob
@@ -24,24 +27,28 @@ class M6Pupill:
     _pupLocation  = None
     file = None
     def __init__(self, file=None, data=None, header=None):
-        self.header = {'az':-999.99,'derot':-999.99, 'at':config.getAt()}               
+        
         header = {} if header is None else header
         
         if file is not None:
             self.data, fitsHeader = io.readFitsData(file)            
-            self.file = file
-            header = dict(header, **fitsHeader)
+            self.file = file            
+            fitsHeader.update(header)
+            header = fitsHeader
         else:
             self.data = data
-
-        self.header = dict(self.header, **header)
+        self.header = header
+        for k, v in {'az':-999.99,'derot':-999.99, 'at':config.getAt()}.items():
+            self.header.setdefault(k,v)
+        
     @classmethod
     def fromCcd(cl, header=None):
         data, h = cmd.getImage()
         header = h if header is None else dict(header, **h)
-        
+        if header.get("az", None) is None: header['az'] = cmd.getAzPos()
+        if header.get("derot", None) is None: header['derot'] = cmd.getDerotPos()        
         return cl(data=data, header=header)
-            
+    
     @property
     def at(self):
         return self.header['at']
