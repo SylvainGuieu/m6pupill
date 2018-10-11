@@ -1,4 +1,7 @@
 import os
+
+simulate = False
+
 atConfLoockup = { # loockup by at 
      1: dict( fluxTreshold = 1550,  pupLocation =  [ [367,404], [682,670]] ), 
      2: dict( fluxTreshold = 1550,  pupLocation = [ [367,350], [682,700]] ), 

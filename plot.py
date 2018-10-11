@@ -125,7 +125,9 @@ def plotRunOut(l, axes=None, fig=None, leg=None, title="",fit=False):
     axes.set_title(title+" "+ttl)
     
     for p,c in zip(l, centers):
-        axes.text(  c[0],c[1], fmt.format(h=p.header))
+        if not np.isnan(np.sum(c)):
+            axes.text(  c[0],c[1], fmt.format(h=p.header))
+    
     if fit and len(l)>=3:
         (x0,y0), r = compute.runout(centers)
         
@@ -150,6 +152,7 @@ def plotMasks(l, fig=None):
     
 
 CUTFIG = 1
+TMPFIG = 2
 
 shownFigure= set()
 def runPlotStart():

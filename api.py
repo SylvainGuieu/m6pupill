@@ -1,21 +1,37 @@
 from .pupill import M6PupillList, M6Pupill
+
+tmpImage = None
+
 imageList = M6PupillList([])
 imageListIndex = -1
 
 imageChangedEvents = []
-
+newTmpImageEvents = []
 def addImageChangedTrace(callable):
     global imageChangedEvents
     if not hasattr(callable, "__call__"):
         raise ValueError("expecting a callable")
     imageChangedEvents.append(callable)
 
+def addTmpImageTrace(callable):
+    global newTmpImageEvents
+    if not hasattr(callable, "__call__"):
+        raise ValueError("expecting a callable")
+    newTmpImageEvents.append(callable)
+    
 def imageChanged():
     global imageChangedEvents
     global imageList, imageListIndex
     for f in imageChangedEvents:
         f(imageList, currentImage())
-    
+
+def tmpImageChanged():
+    global newTmpImageEvents
+    global tmpImage
+    for f in newTmpImageEvents:
+        f(tmpImage)
+
+        
 def currentImage():
     global imageList, imageListIndex
     N = len(imageList)
@@ -73,5 +89,20 @@ def replaceImage():
     
 def setImageList(lst, index=None):
     global imageList, imageListIndex
-    lst = imageList
+    imageList = lst
     imageListIndex = len(imageList)-1    
+    imageChanged()
+
+def newTmpImage():
+    global tmpImage
+    tmpImage = M6Pupill.fromCcd()
+    tmpImageChanged()
+    
+def getTmpImage():
+    global tmpImage
+    return  tmpImage
+
+def setTmpImage(img):
+    global tmpImage
+    tmpImage = img
+    tmpImageChanged()

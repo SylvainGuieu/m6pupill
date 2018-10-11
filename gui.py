@@ -4,30 +4,28 @@ import matplotlib
 import numpy as np
 matplotlib.use('TkAgg')
 from . import plot
-from .pupill import M6PupillList
+from .pupill import M6PupillList,  M6Pupill
 from . import run, io
 from .api import *
+from . import cmd
 
-try:
-    from . import cmd
-except:
-    print('CSS in Simu')
-    from . import cmdSimu as cmd
+
 debug = True
 
-class AquisitionFrame(Frame):
-    def __init__(self,  master, **kwargs):
-        Frame.__init__(self, master, **kwargs)
-
-imgageList = M6PupillList([])
-imageListIndex = -1
+PX = 4
 
 def imageChangedGui(lst, current):    
     N = len(lst)
     if N:
         plot.runPlot(lst, current)
-        runClock()        
-
+        runClock()
+        
+def tmpImageChangeGui(img):
+    if img is None: return
+    fig = plot.plt.figure(plot.TMPFIG); fig.clear()
+    
+    plot.plotPupillCut(img, fig=fig)
+    plot.showfig(fig)
 
 def parseBoxCorner(sval):
     vals = [s.strip() for s in sval.split(" ")]
@@ -72,15 +70,25 @@ def getCenterStr(p):
     c = p.getCenter()
     if np.isnan(np.sum(c)): return "Nan"
     return ", ".join("%.2f"%v for v in c)
+
+def getRefreshState():
+    global refreshState
+    return refreshState
+
+def setRefreshState(val):
+    global refreshState
+    refreshState = val
     
 
 CL, CE, CV, CU, CB = range(5); 
-def newEntry(master, label, setFunc, getFunc,  unit="", dtype=float, row=0, mode="return", setKw={}, entryKw={}):
+def newEntry(master, label, setFunc, getFunc,  unit="", dtype=float, row=0, mode="return", default=None, setKw={}, entryKw={}):
     svin  = StringVar(master)
     svout = StringVar(master)
     
-    
-    svin.set(getFunc())
+    if default is None:
+        svin.set(getFunc())
+    else:
+        svin.set(default)
     svout.set(getFunc())
     
     Label(master, text=label).grid(row=row, column=CL)
@@ -98,7 +106,7 @@ def newEntry(master, label, setFunc, getFunc,  unit="", dtype=float, row=0, mode
             entry.configure(background="#ff0000")
             if debug: print(e)
         else:         
-            entry.configure(background="#ffffff")
+            entry.configure(background=master['background'])
             setFunc(v)
             svout.set(getFunc())
         
@@ -136,37 +144,67 @@ class PupillConfFrame(Frame):
         
         R=0    
         newEntry(self, "Treshold", changeParam(config.setTreshold), config.getTreshold, "", float, R)
+
         R += 1
         newEntry(self, "Box x0 y0 W H", changeParam(config.setPupLocation), getBoxCorner, "", parseBoxCorner, R)        
+
         R += 1
-        newEntry(self, "Derot (degree)", cmd.moveDerot, cmd.getDerotPos, "", float, R, mode="set")        
+        derotVar = newEntry(self, "Derot (degree)", cmd.moveDerot, cmd.getDerotPos, "", float, R, mode="set", default=0.0)
+        addToClock(derotVar,cmd.getDerotPos)
+
         R += 1
-        newEntry(self, "Az (degree)", cmd.moveAz, cmd.getAzPos, "", float, R, mode="set")
+        azVar= newEntry(self, "Az (degree)", cmd.moveAz, cmd.getAzPos, "", float, R, mode="set", default=0.0)
+        addToClock(azVar, cmd.getAzPos)
         
 
+class RefreshFrame(Frame):
+     def __init__(self,  master,  **kwargs):
+        Frame.__init__(self, master, **kwargs)
+
+        Label(self, text="Attach").pack(side=LEFT)
+        refreshStatVar = BooleanVar(self)
+        refreshStatVar.set(getRefreshState())
+        refreshStatVar.trace('w', lambda *a,v=refreshStatVar: setRefreshState(v.get()))
+        Checkbutton(self, text="Auto Refresh", variable=refreshStatVar).pack(side=LEFT)
+        
+        addToClock(refreshStatVar, getRefreshState)
+
+        options = ["MANUAL", "LIVE"]
+        optionVar = StringVar()
+        optionVar.set(options[getRefreshState()])
+        #optionVar
+        
+        
+        Button(self, text="Refresh", command=newTmpImage).pack(side=LEFT, padx=PX)        
+        runClock()
+     
+        
+        
+        
 class ImageFrame(Frame):
     def __init__(self,  master,  **kwargs):
         Frame.__init__(self, master, **kwargs)
                 
-        counterVar = IntVar()
-        counterVar.set(nImage())
-        indexVar = IntVar()
-        indexVar.set(getIndex()+1)
-        addToClock(counterVar, lambda self=self:  nImage())
-        addToClock(indexVar  , lambda self=self:  getIndex()+1)
+        counterVar = StringVar(self)
+        counterVar.set(str(nImage()))
+
+        indexVar = StringVar(self)
+        indexVar.set(str(getIndex()+1))
+        addToClock(counterVar, lambda self=self:  str(nImage()))
+        addToClock(indexVar  , lambda self=self:  str(getIndex()+1))
         
             
-        azVar = StringVar()
+        azVar = StringVar(self)
         fc = lambda self=self: getKeyStr(currentImage(), "az")
         azVar.set(fc())
         addToClock(azVar, fc)
         
-        derotVar = StringVar()
+        derotVar = StringVar(self)
         fc = lambda self=self: getKeyStr(currentImage(), "derot")
         derotVar.set(fc())
         addToClock(derotVar, fc)
         
-        centerVar = StringVar()                    
+        centerVar = StringVar(self)                    
         fc = lambda self=self: getCenterStr(currentImage())
         centerVar.set(fc())        
         addToClock(centerVar, fc)
@@ -175,8 +213,8 @@ class ImageFrame(Frame):
         f1 = Frame(self)
         Label(f1, text="Counter").pack(side=LEFT)
         Label(f1, textvariable=counterVar).pack(side=LEFT)                        
-        Button(f1, text="Measure", width=15, command=newImage).pack(side=LEFT)
-        Button(f1, text="Replace", width=15, command=replaceImage).pack(side=LEFT)
+        Button(f1, text="Measure", width=15, command=newImage).pack(side=LEFT,  padx=PX)
+        Button(f1, text="Replace", width=15, command=replaceImage).pack(side=LEFT, padx=PX)
 
         f2 = Frame(self)
         Label(f2, textvariable=indexVar).pack(side=LEFT) 
@@ -198,7 +236,7 @@ class ImageFrame(Frame):
         f3.pack(side=TOP)
         
         imageChanged()
-
+        
         
     def replot(self):
         imageChanged()        
@@ -280,9 +318,10 @@ class RunFrame(Frame):
 class MainFrame(Frame):
     def __init__(self,  master, **kwargs):
         Frame.__init__(self, master, **kwargs)
-        PupillConfFrame(self).pack(side=TOP)
-        ImageFrame(self).pack(side=TOP)
-        RunFrame(self).pack(side=TOP)
+        PupillConfFrame(self).pack(side=TOP, pady=15)
+        RefreshFrame(self).pack(side=TOP, pady=15)
+        ImageFrame(self).pack(side=TOP, pady=15)
+        RunFrame(self).pack(side=TOP, pady=15)
         
 
 def quitGui():
@@ -298,18 +337,29 @@ def _delete_window():
 def _destroy(event):
     quitGui()
 
-def main():  
-    global root    
-    addImageChangedTrace(imageChangedGui) 
-    setImageList(M6PupillList([]))
+def clock():
+    global root
+    runClock()
+    root.after(1000, clock)
+    
+def main(files=[]):  
+    global root, refreshState
+    refreshState = False
+    addImageChangedTrace(imageChangedGui)
+    addTmpImageTrace(tmpImageChangeGui)
+    
+    lst = M6PupillList([M6Pupill(file=file) for file  in files])
+        
+    setImageList(lst)
     
     root = Tk()   
     root.protocol("WM_DELETE_WINDOW", _delete_window)
     root.bind("<Destroy>", _destroy) 
     MainFrame(root).pack()
+    Button(root, text="Quit", width=10, command=quitGui).pack(side=TOP,  pady=10)
     
-    
-    root.geometry("600x300+300+300")
+    root.geometry("800x480+300+300")
+    clock()
     root.mainloop()
 
 

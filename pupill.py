@@ -6,11 +6,7 @@ import numpy as np
 from . import compute 
 from . import io
 from . import config
-try:
-    from . import cmd
-except:
-    print('CSS in Simu')
-    from . import cmdSimu as cmd
+from . import cmd
 
 from scipy.ndimage.interpolation import shift
 import glob
@@ -205,22 +201,22 @@ class M6PupillList:
     def getRunout(self):
         return compute.runout(self.getCenters())
     
-    def byKey(self, key, nMin=1):
+    def byKey(self, key, nMin=1, ndigits=0):
         items = {}
         for p in self.lst:
-            items.setdefault(p.header[key], self.__class__([])).append(p)
+            items.setdefault(round(p.header[key],ndigits), self.__class__([])).append(p)
         if nMin>1:
             items = {k:v  for k,v in items.items() if len(v)>=nMin}
         return items
     
     def byAt(self):
-        return self.byKey('at',1)
+        return self.byKey('at',1,0)
 
     def byAz(self):
-        return self.byKey('az',2)
+        return self.byKey('az',2,0)
 
     def byDerot(self):
-        return self.byKey('derot',2)
+        return self.byKey('derot', 2, 0)
 
     def increasingKey(self, key):
         return self.__class__(sorted(self.lst, key=lambda x:x.header[key] ))
