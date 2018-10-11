@@ -21,4 +21,4 @@ headerDef = {
     }
 keyLoockup = {d[0]:k for k,d in headerDef.items()}
 
-    
+autoSaveImage = True

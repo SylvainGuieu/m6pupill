@@ -61,7 +61,8 @@ def runDerot(l=None, angles=None, prefix="", az=None):
         cmd.moveDerot(angle)
         log ("ok")
         l.appendFromCcd(header={'derot':cmd.getDerotPos(), 'az':cmd.getAzPos()})
-        log("image saved", io.savePup(l[-1], prefix=prefix))
+        if config.autoSaveImage:
+            log("image saved", io.savePup(l[-1], prefix=prefix))
         plot.runPlot(l)
     return l
 
@@ -83,7 +84,8 @@ def runAz(l=None, angles=None, prefix="", derot=None):
         log("rotating Az to %.1f "%angle, end="...")
         cmd.moveAz(angle)
         log ("ok")
-        l.appendFromCcd(header={'derot':cmd.getDerotPos(), 'az':cmd.getAzPos()})
+        if config.autoSaveImage:
+            l.appendFromCcd(header={'derot':cmd.getDerotPos(), 'az':cmd.getAzPos()})
         log("image saved", io.savePup(l[-1], prefix=prefix))
         plot.runPlot(l)
     return l
