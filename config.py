@@ -7,6 +7,27 @@ atConfLoockup = { # loockup by at
      0:  dict( fluxTreshold = 1550,  pupLocation =  [ [380,404], [682,670]] ), 
 }
 
+def setTreshold(treshold, at=None):
+    at = getAt() if at is None else at
+    atConfLoockup[at]['fluxTreshold'] = treshold
+
+def getTreshold(at=None):
+    at = getAt() if at is None else at
+    return atConfLoockup[at]['fluxTreshold']
+
+
+
+
+
+def setPupLocation(loc, at=None):
+    at = getAt() if at is None else at
+    atConfLoockup[at]['pupLocation'] = loc
+
+def getPupLocation(at=None):
+    at = getAt() if at is None else at
+    return atConfLoockup[at]['pupLocation']
+    
+
 defaultAt = 0
 def getAt():
     try:

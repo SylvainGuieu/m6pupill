@@ -8,8 +8,9 @@ from . import io
 from . import config
 try:
     from . import cmd
-except Exception:
-    print('No css')
+except:
+    print('CSS in Simu')
+    from . import cmdSimu as cmd
 
 from scipy.ndimage.interpolation import shift
 import glob
@@ -40,7 +41,14 @@ class M6Pupill:
         self.header = header
         for k, v in {'az':-999.99,'derot':-999.99, 'at':config.getAt()}.items():
             self.header.setdefault(k,v)
-        
+    
+    def getHash(self):
+        """ In the context of derot return a string representing best the object 
+            
+            Two objects with the same hash can be considered as equal 
+        """
+        return "at{d[at]:d}az{h[az]:.1f}derot{h[az]:.1f}"
+            
     @classmethod
     def fromCcd(cl, header=None):
         data, h = cmd.getImage()
@@ -179,7 +187,18 @@ class M6PupillList:
         
     def extend(self, iterable):
         self.lst.extend(iterable)
-
+        
+    def replace(self, new):
+        N = len(self)
+        newHash = new.getHash()
+        for i,p in enumerate(self[::-1]):            
+            if p.getHash()==newHash:
+                self.lst[N-i-1] = new
+                return N-i-1
+        
+        self.append(new)
+        return len(self)-1
+        
     def sortedKey(self, k):
         return self.__class__(sorted(self, key=lambda p, k=k: p.header[k]))  
 

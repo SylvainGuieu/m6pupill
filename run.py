@@ -1,6 +1,11 @@
 from . import plot
 from . import config
-from . import cmd
+try:
+    from . import cmd
+except:
+    print('CSS in Simu')
+    from . import cmdSimu as cmd
+
 from . import io
 from .pupill import M6PupillList, M6Pupill 
 import numpy as np 
@@ -42,9 +47,19 @@ def runFromPrompt(l=None):
         plot.runPlot(l)
     return l
 
-
-def runDerot(l=None, angles=None, prefix="", az=None):
+def parseAngles(current, angles, closure):
+    if angles is None:        
+        angles = np.linspace(0, 360, int(360/15)+1)%360
+    elif not hasattr(angles, "__iter__"):
+        curent = cmd.getDerotPos()
+        angles = np.linspace(current, 360+current, int(360/angles)+1)
+    if not closure: 
+        angle = angle[:-1]
+    return angles
+    
+def runDerot(l=None, angles=None, prefix="", az=None, closure=1):
     if l is None: l =  M6PupillList([])
+    
 
     if az is not None:
         log("rotating Azimuth to %.1f "%az, end="...")
@@ -53,9 +68,10 @@ def runDerot(l=None, angles=None, prefix="", az=None):
     else:
         az = -999.99
     
-    angles = np.linspace(0, 360, int(360/15)+1) if angles is None else angles
+    angles = parseAngles(cmd.getDerotPos(), 15 if angles is None else angles, closure)
+    
     plot.runPlotStart()
-    runCheckFromPrompt(at=config.getAt())
+    #runCheckFromPrompt(at=config.getAt())
     for angle in angles:
         log("rotating to Derotator %.1f "%angle, end="...")
         cmd.moveDerot(angle)
@@ -66,7 +82,7 @@ def runDerot(l=None, angles=None, prefix="", az=None):
         plot.runPlot(l)
     return l
 
-def runAz(l=None, angles=None, prefix="", derot=None):
+def runAz(l=None, angles=None, prefix="", derot=None, closure=False):
     if l is None: l =  M6PupillList([])
     
     if derot is not None:
@@ -76,9 +92,12 @@ def runAz(l=None, angles=None, prefix="", derot=None):
     else:
         derot = -999.99
     
-    angles = np.linspace(0, 360, int(360/30)+1)[:-1] if angles is None else angles
+    
+    angles = parseAngles(cmd.getAzPos(), 30 if angles is None else angles, closure)
+        
+    
     plot.runPlotStart()
-    runCheckFromPrompt(at=config.getAt())
+    #runCheckFromPrompt(at=config.getAt())
     
     for angle in angles:
         log("rotating Az to %.1f "%angle, end="...")

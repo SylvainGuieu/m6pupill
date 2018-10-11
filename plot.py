@@ -40,13 +40,16 @@ def plotCut(p,direction, slc=None, axes=None, fig=None):
     direction = direction.lower()
     if  len(direction)<2:
         direction = direction+direction
-        
+    
+    if isnan(np.sum(c)):
+        c = (data.shape[1]/2., data.shape[0]/2.)
+    
     if slc is None:
         slc = slice(0, None)
     if direction[0]=="x":
-        data = data[int(c[1]),slc]
+        data = data[int(round(c[1])),slc]
     elif direction[0]=="y":
-        data = data[slc,int(c[0])]
+        data = data[slc,int(round(c[0]))]
     else:
         raise KeyError('unknown direction%s must be x or y'%direction)
     if direction[1]=='x':
@@ -74,12 +77,12 @@ def plotMask(p, axes=None, fig=None):
         
     mask = p.getMask()
     axes.imshow(mask, origin='lower');
-    axes.set_title("az {az:.0f} derot {derot:.0f}".format(**p.header))
+    axes.set_title("az {h[az]:.0f} derot {h[derot]:.0f}".format(h=p.header))
     xc, yc = p.getCenter();
     axes.plot(xc, yc, 'k+');
     radius = p.getRadius();
     alpha = np.linspace( 0, 2*pi, 50)
-    axes.plot( radius*np.cos(alpha)+xc, radius*np.sin(alpha)+yc, 'r-') 
+    #axes.plot( radius*np.cos(alpha)+xc, radius*np.sin(alpha)+yc, 'r-') 
     
     return axes
 
@@ -105,24 +108,24 @@ def plotRunOut(l, axes=None, fig=None, leg=None, title="",fit=False):
     
     ttl = "at: "+", ".join(set(["%d"%p.at for p in l]))
     if leg=="derot":
-        fmt = "{derot:.0f}"
+        fmt = "{h[derot]:.0f}"
         ttl  += " Az: "+", ".join(set(["%.0f"%p.az for p in l]))
     elif leg=="az":
-        fmt  = "{az:.0f}"
+        fmt  = "{h[az]:.0f}"
         ttl += " Derot: "+", ".join(set(["%.0f"%p.derot for p in l]))
     else:
-        fmt = "{az:.0f}, {derot:.0f}"
+        fmt = "{h[az]:.0f}, {h[derot]:.0f}"
 
     
     centers = l.getCenters()
-    
+        
     axes.plot(centers[:,0], centers[:,1], 'k+-')
     axes.set_xlabel('X (pixel)')
     axes.set_ylabel('Y (pixel)')
     axes.set_title(title+" "+ttl)
     
     for p,c in zip(l, centers):
-        axes.text(  c[0],c[1], fmt.format(**p.header))
+        axes.text(  c[0],c[1], fmt.format(h=p.header))
     if fit and len(l)>=3:
         (x0,y0), r = compute.runout(centers)
         

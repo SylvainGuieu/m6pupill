@@ -6,7 +6,10 @@ from astropy.io import fits
 keyTypes = {'az':float, 'derot':float, 'at':int}
 
 def detdata():
-    return os.path.join(os.environ['INS_ROOT'], "SYSTEM", "DETDATA")
+    try:
+        return os.path.join(os.environ['INS_ROOT'], "SYSTEM", "DETDATA")
+    except KeyError:
+        return "/tmp"
 
 def readFitsData(file):
      # read the data and add 
