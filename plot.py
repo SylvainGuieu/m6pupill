@@ -1,5 +1,9 @@
 from matplotlib.pylab import *
-from . import compute
+from . import compute, config
+
+CUTFIG = 1
+TMPFIG = 2
+ALIGNFIG = 3
 
 def getAxes(axes, fig):
     if axes is None:
@@ -23,26 +27,81 @@ def getFigure(fig):
     else:
         return fig 
 
-def plotPupillCut(p, fig=None):
+def plotPupillCut(p, l=None, fig=None):
     fig = getFigure(fig)
     fig.clear()
     fig, axes = plt.subplots(2,2, num=fig.number);
     plotPupill(p, axes=axes[0][0])
     plotCut(p, "y", axes=axes[0][1])
     plotCut(p, "x", axes=axes[1][0])
-    plotMask(p, axes=axes[1][1])
+    if p.centerMode==config.PUPILLMODE:
+        plotMask(p, axes=axes[1][1])
+    else:
+        plotSubImage(p, axes=axes[1][1])
+    if l:
+        plotRunOutCenters(l, axes=(axes[0][0],axes[1][1]))
+        
     return fig
 
-def plotCut(p,direction, slc=None, axes=None, fig=None):
+def plotAlign(p, l, fig=None, derotTol=0.1):
+    
+    fig = getFigure(fig)
+        
+    fig.clear()
+    fig, axes = plt.subplots(1,2, num=fig.number);
+    axes = axes.flat
+    if l is None or not l:
+        axes[0].text(0.0. 0.0, "Not enough measurements")
+        return fig
+    d = l.byDerot()
+    for r, subl in d.items():
+        if np.abs(p.derot-r) <= derotTol:
+            break
+    else:
+        axes[0].text(0.0. 0.0, "Cannot find measurements for current Rotator pos")
+        return fig    
+    
+        plotSubImage(p, axes=axes[0])
+        pc = p.getCenter()
+        plotCenter(pc, axes=axes[0], color="black")
+        
+        roCenter = subl.getRunout()
+        if roCenter is None or np.isnan(np.mean(roCenter)):
+            axes[1].text(0.0. 0.0, "Cannot compute RunOut center")
+            return fig
+        
+        plotCenter(roCenter, axes=axes[0], color="red")
+        
+    if p.centerMode == config.PUPILLMODE:        
+        sy = p.synthesize(roCenter)
+        plotSubDifMask(p, sy, axes=axes[1])
+        plotCenter(pc, axes=axes[0], color="red")
+        plotCenter(roCenter, axes=axes[0], color="red")
+        
+    else:
+        x = [roCenter[0], pc[0]]
+        y = [roCenter[1], pc[1]]
+        r = np.sqrt( x**2 + y**2)
+        axes[1].plot(x, y, "-+k")
+        size = max( r*2, 10)*1.2
+        axes.set_xlin( roCenter[0]-size/2.0, roCenter[0]+size/2.0)
+        axes.set_ylin( roCenter[1]-size/2.0, roCenter[1]+size/2.0)
+
+    return fig 
+    
+    
+    
+def plotCut(p, direction, slc=None, axes=None, fig=None):
     axes, fig = getAxes(axes, fig)
     data = p.data
     c = p.getCenter()
     direction = direction.lower()
     if  len(direction)<2:
         direction = direction+direction
-    
-    if isnan(np.sum(c)):
-        c = (data.shape[1]/2., data.shape[0]/2.)
+
+    (x0,y0),(x1,y1) = p.pupLocation 
+    if isnan(np.sum(c)):               
+        c = (x0+x1)/2.0, (y0+y1)/2.0
     
     if slc is None:
         slc = slice(0, None)
@@ -59,19 +118,60 @@ def plotCut(p,direction, slc=None, axes=None, fig=None):
         axes.plot(data, np.arange(len(data)), 'k-')
         axes.axvline(p.fluxTreshold, color='red')
     return axes
-    
-    
 
+def plotSubImage(p, axes=None, fig=None):
+    axes, fig = getAxes(axes, fig)
+    data, (x0,y0) = p.getSubImage()
+    h,w = data.shape
+    extend = (x0, y0, x0+w, y0+w)
+    axes.imshow(data, origin='lower', extend=extend);
+
+def plotSubMask(p, axes=None, fig=None):
+    axes, fig = getAxes(axes, fig)
+    data, (x0,y0) = p.getSubMask()
+    h,w = data.shape
+    extend = (x0, y0, x0+w, y0+w)
+    axes.imshow(data, origin='lower', extend=extend);
+    
+    
 def plotPupill(p, axes=None, fig=None):
     axes, fig = getAxes(axes, fig)
     axes.imshow(p.data, origin='lower');
     loc = p.pupLocation
     x = [loc[0][0], loc[1][0],  loc[1][0], loc[0][0], loc[0][0]]
     y = [loc[0][1], loc[0][1], loc[1][1], loc[1][1], loc[0][1]]
-    axes.plot( x,  y, 'k-')    
+    axes.plot( x,  y, 'k-')
+    plotCenter(p.getCenter(), axes=axes)
+    return axes
+
+def plotCenter(center, axes=None, fig=None, size=10, color="black"):
+    if center is None: return
+    if np.isnan(np.mean(center)): return
+    axes, fig = getAxes(axes, fig)
+    x,y = center
+    axes.plot([x-size/2.0,  x+size/2.0], [y,y], '-', color=color)
+    axes.plot([x,x], [y-size/2.0,  y+size/2.0], '-', color=color)
     return axes
 
 
+def plotRunOutCenters(lst,  axes=None, fig=None, size=10, color="red"):
+    #if not isinstance(axes, (list,tuple)):
+    if not hasattr(axes, "__iter__"):
+        axes, fig = getAxes(axes, fig)
+        axes = [axes]
+    
+    for derot, l in lst.byDerot().items():
+        if len(l)<2: continue
+        try:
+            c,r = l.getRunout()
+        except Exception as e:
+            print(e)
+        if c is None: continue
+        if np.isnan(np.mean(c)): continue
+        
+        for ax in axes:
+            plotCenter(c, axes=ax, size=size, color=color)    
+    return axes[-1]
 
 def plotMask(p, axes=None, fig=None):
     axes, fig = getAxes(axes, fig)
@@ -79,8 +179,8 @@ def plotMask(p, axes=None, fig=None):
     mask = p.getMask()
     axes.imshow(mask, origin='lower');
     axes.set_title("az {h[az]:.0f} derot {h[derot]:.0f}".format(h=p.header))
-    xc, yc = p.getCenter();
-    axes.plot(xc, yc, 'k+');
+    plotCenter(p.getCenter(), axes=axes)
+    
     radius = p.getRadius();
     alpha = np.linspace( 0, 2*pi, 50)
     #axes.plot( radius*np.cos(alpha)+xc, radius*np.sin(alpha)+yc, 'r-') 
@@ -97,6 +197,22 @@ def plotDifMask(p1, p2, axes=None, fig=None):
     
     
     axes.imshow(dMask, origin='lower');
+    axes.set_title("%.4f%%"%(prop*100))
+    return axes
+
+def plotSubDifMask(p, axes=None, fig=None):
+    axes, fig = getAxes(axes, fig)
+
+    m2, (x0,y0) = p2.getSubMask()
+    m1, _ = p1.getSubMask()
+
+    dMask = m1*1-m2*1
+    norm = np.sum(m2)
+    prop = np.abs(np.sum(~dMask[m2])/norm)
+    
+    h,w = data.shape
+    extend = (x0, y0, x0+w, y0+w)
+    axes.imshow(dMask, origin='lower', extend=extend);
     axes.set_title("%.4f%%"%(prop*100))
     return axes
 
@@ -152,8 +268,7 @@ def plotMasks(l, fig=None):
     return fig
     
 
-CUTFIG = 1
-TMPFIG = 2
+
 
 shownFigure= set()
 def runPlotStart():
@@ -173,9 +288,9 @@ def showfig(fig, always=False):
 def runPlot(l, p=None):
     if p is None: p = l[-1]
     fig = plt.figure(CUTFIG); fig.clear()
-    plotPupillCut(p, fig=fig)
+    plotPupillCut(p, l, fig=fig)
     showfig(fig)
-        
+    
     for i,(derot,laz) in enumerate(l.byDerot().items()):
         fnum = (i+1)*10
         fig = plt.figure(fnum); fig.clear()

@@ -22,6 +22,7 @@ confLoockup = { # loockup by at
 class M6Pupill:
     _fluxTreshold = None
     _pupLocation  = None
+    _centerMode = None
     file = None
     def __init__(self, file=None, data=None, header=None):
         
@@ -82,22 +83,26 @@ class M6Pupill:
         self._fluxTreshold = t
     
     @property
-    def spotMode(self):
-        return config.getSpotMode if self._spotMode is None else self._spotMode
+    def centerMode(self):
+        return config.getCenterMode() if self._centerMode is None else self._centerMode
     
-    @spotMode.setter
-    def spotMode(self, mode):
-        self._spotMode = mode
+    @centerMode.setter
+    def centerMode(self, mode):
+        self._centerMode = mode
     
     def getCenter(self):
-        if self.spotMode == config.PUPILLMODE:
+        if self.centerMode == config.PUPILLMODE:
             return compute.pupillCenter(self.getMask())
         else:            
             return compute.spotCenter(*self.getSubImage())
     
-    def getSubImages(self):        
+    def getSubImage(self):        
         (x0,y0),(x1,y1) = self.pupLocation
         return self.data[y0:y1,x0:x1], (x0,y0)
+
+    def getSubMask(self):        
+        (x0,y0),(x1,y1) = self.pupLocation
+        return self.getMask()[y0:y1,x0:x1], (x0,y0)
     
     def getRadius(self):
         return compute.radius(self.getMask())

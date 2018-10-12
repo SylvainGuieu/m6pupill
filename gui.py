@@ -34,7 +34,6 @@ def stopExpo():
     guiConfig['expoRunning'] = False
 
     
-
 def imageChangedGui(lst, current):    
     N = len(lst)
     if N:
@@ -44,8 +43,11 @@ def imageChangedGui(lst, current):
 def tmpImageChangeGui(img):
     if img is None: return
     fig = plot.plt.figure(plot.TMPFIG); fig.clear()    
-    plot.plotPupillCut(img, fig=fig)
+    plot.plotPupillCut(img, getImageList(), getPufig=fig)
     plot.showfig(fig)
+    if len(getImageList()>1):
+        plot.plotAlign(getImageList(), fig=plot.ALIGNFIG)
+    
 
 def parseBoxCorner(sval):
     vals = [s.strip() for s in sval.split(" ")]
@@ -151,17 +153,18 @@ def addToClock(var, getFunc):
 def runClock():
     for (var,getFunc) in clockVars.values():
         var.set(getFunc())
-        
-class SetupFrame(Frame):
+
+
+class ComputingFrame(Frame):
     def __init__(self,  master, **kwargs):
         Frame.__init__(self, master,  **kwargs)
-                                
+        
         def changeParam(f):
             def change(val):
                 f(val)
                 imageChanged()
             return change
-
+        
         
         f1 = Frame(self)
         
@@ -171,6 +174,38 @@ class SetupFrame(Frame):
         R += 1
         newEntry(f1, "Box x0 y0 W H", changeParam(config.setPupLocation), getBoxCorner, "", parseBoxCorner, R)        
 
+        R += 2
+        options = ['SPOT', 'PUPILL DISK (M6)']
+        optionVar = StringVar(self)
+        
+        def setMode(*a, v=optionVar):
+            mstr = v.get()
+            if mstr[:2]=="PU":
+                config.setCenterMode(config.PUPILLMODE)
+            else:
+                config.setCenterMode(config.SPOTMODE)
+            imageChanged()
+        
+        def getMode(options=options):
+            m = config.getCenterMode()
+            if m == config.PUPILLMODE:
+                return options[1]
+            else:
+                return options[0]
+        
+        optionVar.set(getMode())        
+        optionVar.trace('w', setMode)
+        
+        OptionMenu(self,optionVar, *options).pack(side=TOP)
+        f1.pack(side=TOP)
+        
+class SetupFrame(Frame):
+    def __init__(self,  master, **kwargs):
+        Frame.__init__(self, master,  **kwargs)
+        
+        f1 = Frame(self)
+        R = 0
+        
         R += 1
         derotVar = newEntry(f1, "Derot (degree)", cmd.moveDerot, cmd.getDerotPos, "", float, R, mode="set", default=0.0)
         addToClock(derotVar,cmd.getDerotPos)
@@ -348,11 +383,11 @@ class RunFrame(Frame):
 class MainFrame(Frame):
     def __init__(self,  master, **kwargs):
         Frame.__init__(self, master, **kwargs)
+        ComputingFrame(self).pack(side=TOP, pady=15)
         SetupFrame(self).pack(side=TOP, pady=15)
         ExpoFrame(self).pack(side=TOP, pady=15)
         ImageFrame(self).pack(side=TOP, pady=15)
-        RunFrame(self).pack(side=TOP, pady=15)
-        
+        RunFrame(self).pack(side=TOP, pady=15)     
 
 def quitGui():
     global root
@@ -393,7 +428,7 @@ def main(files=[]):
     MainFrame(root).pack()
     Button(root, text="Quit", width=10, command=quitGui).pack(side=TOP,  pady=10)
     
-    root.geometry("715x620+300+300")
+    root.geometry("715x660+300+300")
     clock()
     root.mainloop()
 

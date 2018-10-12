@@ -11,7 +11,7 @@ def pupillCenter(mask):
     y = np.sum(mask*Y)/norm
     return x,y
 
-def spotCenter(img, offset=[0,0]):
+def spotCenter(img, offset=[0,0]):    
     com = center_of_mass(img)
     return com[0]+offset[0], com[1]+offset[1]
 
