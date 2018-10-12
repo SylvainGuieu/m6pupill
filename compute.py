@@ -1,14 +1,19 @@
 import numpy as np
 from scipy.ndimage.interpolation import shift
 from scipy.optimize import curve_fit
+from scipy.ndimage.measurements import center_of_mass
 
-def center(mask):
+def pupillCenter(mask):
     shape = mask.shape
     X, Y = np.meshgrid(range(shape[1]), range(shape[0]) )
     norm = float(np.sum(mask))
     x = np.sum(mask*X)/norm
     y = np.sum(mask*Y)/norm
     return x,y
+
+def spotCenter(img, offset=[0,0]):
+    com = center_of_mass(img)
+    return com[0]+offset[0], com[1]+offset[1]
 
 def radius(mask):
     return np.sqrt(np.sum(mask)/np.pi)

@@ -80,10 +80,25 @@ class M6Pupill:
     @fluxTreshold.setter
     def fluxTreshold(self, t):
         self._fluxTreshold = t
-
+    
+    @property
+    def spotMode(self):
+        return config.getSpotMode if self._spotMode is None else self._spotMode
+    
+    @spotMode.setter
+    def spotMode(self, mode):
+        self._spotMode = mode
+    
     def getCenter(self):
-        return compute.center(self.getMask())
-
+        if self.spotMode == config.PUPILLMODE:
+            return compute.pupillCenter(self.getMask())
+        else:            
+            return compute.spotCenter(*self.getSubImage())
+    
+    def getSubImages(self):        
+        (x0,y0),(x1,y1) = self.pupLocation
+        return self.data[y0:y1,x0:x1], (x0,y0)
+    
     def getRadius(self):
         return compute.radius(self.getMask())
         
