@@ -36,8 +36,6 @@ def radius(mask):
 def circle(x,  x0,  y0, r ) :
     return np.sqrt( r**2 - (x-x0)**2) + y0
 
-
-
 def runout(centers, angles=None):
 
     N = len(centers)
@@ -56,9 +54,33 @@ def runout(centers, angles=None):
     pout, pcov = curve_fit(circle, centers[:,0], centers[:,1], p0=params) 
     return  (pout[0], pout[1]), pout[2]
 
+def box2location(box):
+    if len(box)==2:
+        (x,y), w = box
+        h = w    
+    else:
+        (x,y), w , h = box
+    x0 = int(x-w/2.0)
+    x1 = x0 + w
+    y0 = int(y-w/2.0)
+    y1 = y0 + h
+    return [[x0,y0], [x1,y1]]
+
+def location2box(location):
+    (x0,y0), (x1,y1) = location
+    w = abs(x0-x1)
+    h = abs(y0-y1)
+    x = (x0+x1)/2.0
+    y = (y0+y1)/2.0
+    if w==h:
+        return [(x,y), w]
+    else:
+        return [(x,y), w, h]
+    
+    
+
 def circle(x,  x0,  y0, r ) :
     return np.sqrt( r**2 - (x-x0)**2) + y0
-
 
 
 

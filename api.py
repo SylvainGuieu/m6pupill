@@ -1,5 +1,5 @@
 from .pupill import M6PupillList, M6Pupill
-
+from . import io
 tmpImage = None
 
 imageList = M6PupillList([])
@@ -31,7 +31,17 @@ def tmpImageChanged():
     for f in newTmpImageEvents:
         f(tmpImage)
 
-        
+def saveImage():
+    img = currentImage()
+    if img.file: return 
+    img.file = io.savePup(img)
+    imageChanged()
+
+def saveAll():
+    for img in getImageList():
+        img.file = io.savePup(img)
+    imageChanged()
+    
 def currentImage():
     global imageList, imageListIndex
     N = len(imageList)
@@ -52,6 +62,14 @@ def nextImage():
     if imageListIndex>=(N-1): return 
     imageListIndex += 1
     imageChanged()
+
+
+def selectImage(index):
+    global imageList, imageListIndex
+    N = len(imageList)
+    if index>=0 and index<N:
+        imageListIndex = index
+        imageChanged()
     
 def previousImage():
     global imageList, imageListIndex

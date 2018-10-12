@@ -11,17 +11,10 @@ from . import cmd
 from scipy.ndimage.interpolation import shift
 import glob
 
-confLoockup = { # loockup by at 
-     1: dict( fluxTreshold = 1550,  pupLocation =  [ [367,404], [682,670]] ), 
-     2: dict( fluxTreshold = 1550,  pupLocation = [ [367,350], [682,700]] ), 
-     3: dict(  fluxTreshold = 2050,  pupLocation = [ [380,345], [720,632]] ), 
-     4: dict(  fluxTreshold = 2100,  pupLocation = [ [413,250], [682,511]] ), 
-     0: dict( fluxTreshold = 1550,  pupLocation =  [ [380,404], [682,670]] ), 
-}
 
 class M6Pupill:
     _fluxTreshold = None
-    _pupLocation  = None
+    _box  = None
     _centerMode = None
     file = None
     def __init__(self, file=None, data=None, header=None):
@@ -68,16 +61,26 @@ class M6Pupill:
         
     @property
     def fluxTreshold(self):
-        return config.atConfLoockup[self.at]['fluxTreshold'] if self._fluxTreshold is None else self._fluxTreshold
+        
+        return config.getTreshold(self.at, self.centerMode) if self._fluxTreshold is None else self._fluxTreshold
 
     @property
-    def pupLocation(self):
-        return config.atConfLoockup[self.at]['pupLocation'] if self._pupLocation is None else self._pupLocation
-
-    @pupLocation.setter
-    def pupLocation(self, loc):
-        self._pupLocation = loc
-
+    def boxLocation(self):
+        return compute.box2location(self.box)
+        
+    @boxLocation.setter
+    def boxLocation(self, loc):
+        self.box = compute.location2box(loc)
+    
+    @property
+    def box(self):
+        return config.getBox(self.at, self.centerMode) if self._box is None else self._box
+    
+    @box.setter
+    def box(self, loc):
+        self._box = loc
+    
+        
     @fluxTreshold.setter
     def fluxTreshold(self, t):
         self._fluxTreshold = t
@@ -91,21 +94,20 @@ class M6Pupill:
         self._centerMode = mode
     
     def getCenter(self):
-        if self.centerMode == config.PUPILLMODE:
+        if self.centerMode == config.M6MODE:
             return compute.pupillCenter(self.getMask())
         else:
-            img, offset = self.getSubImage()
-            mask, _ = self.getSubMask()
-            
-            return compute.spotCenter(img*mask, offset)
+            img, offset = self.getSubImage()            
+            return compute.spotCenter(img, offset)
     
     def getSubImage(self):        
-        (x0,y0),(x1,y1) = self.pupLocation
+        (x0,y0),(x1,y1) = self.boxLocation
         return self.data[y0:y1,x0:x1], (x0,y0)
 
     def getSubMask(self):        
-        (x0,y0),(x1,y1) = self.pupLocation
-        return self.getMask()[y0:y1,x0:x1], (x0,y0)
+        (x0,y0),(x1,y1) = self.boxLocation
+        m = self.getMask()
+        return m[y0:y1,x0:x1], (x0,y0)
     
     def getRadius(self):
         return compute.radius(self.getMask())
@@ -114,11 +116,11 @@ class M6Pupill:
         
         shape = self.data.shape
         X, Y = np.meshgrid(range(shape[1]), range(shape[0]) )
+        
+        (x0,y0),(x1,y1) = self.boxLocation
         return (self.data>self.fluxTreshold)   *\
-            (X>self.pupLocation[0][0])  *\
-            (X<self.pupLocation[1][0])  *\
-            (Y>self.pupLocation[0][1])  *\
-            (Y<self.pupLocation[1][1])
+            (X>x0) * (X<x1)  *\
+            (Y>y0) * (Y<y1)
     
     def synthesize(self, center, bckg=None, flux=None):
         img = self.data

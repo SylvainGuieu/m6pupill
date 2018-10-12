@@ -1,4 +1,5 @@
-from tkinter import * 
+from tkinter import *
+import os
 from . import config
 import matplotlib
 import numpy as np
@@ -51,32 +52,24 @@ def tmpImageChangeGui(img):
         plot.showfig(fig)
     
 
-def parseBoxCorner(sval):
+def parseBoxCorner(sval):    
     vals = [s.strip() for s in sval.split(" ")]
     N = len(vals)
-    if not (N==4 or N==3):
+    if N==3:
+        return [(float(vals[0]), float(vals[1])), float(vals[2])]
+    if N==4:
+        return [(float(vals[0]), float(vals[1])), float(vals[2]), float(vals[3])]
+    else:
         raise ValueError('must be 3 or 4 elements')
-        
-    fvals = [float(v) for v in vals]
     
-    w = fvals[2]
-    h = w if len(fvals)==3 else fvals[3]
-    if w<=0 or h<=0:
-        raise ValueError('width and height must be >0')
     
-    x1 = fvals[0]-w/2.0
-    y1 = fvals[1]-w/2.0
-    x2 = fvals[0]+h/2.0
-    y2 = fvals[1]+h/2.0
-    return [[x1,y1],[x2,y2]]
 
 def getBoxCorner():
-    b = config.getPupLocation()
-    w = b[1][0]-b[0][0]
-    h = b[1][1]-b[0][1]
-    x = (b[0][0]+b[1][0])/2.0
-    y = (b[0][1]+b[1][1])/2.0
-    return "%.0f %.0f %.0f %.0f"%(x, y, w, h)
+    b = config.getBox()
+    if len(b)==2:        
+        return "%.0f %.0f %.0f"%(b[0][0], b[0][1], b[1])
+    else:
+        return "%.0f %.0f %.0f %.0f"%(b[0][0], b[0][1], b[1], b[2])
 
 def getKey(p, key, empty=-99.99):
     if p is None: return empty        
@@ -174,28 +167,39 @@ class ComputingFrame(Frame):
         f1 = Frame(self)
         
         R=0    
-        newEntry(f1, "Treshold", changeParam(config.setTreshold), config.getTreshold, "", float, R)
-
+        addToClock(
+            newEntry(f1, "Treshold", changeParam(config.setTreshold), config.getTreshold, "", float, R),
+             config.getTreshold
+        )
+        
         R += 1
-        newEntry(f1, "Box x0 y0 W H", changeParam(config.setPupLocation), getBoxCorner, "", parseBoxCorner, R)        
-
+        addToClock(
+            newEntry(f1, "Box x0 y0 W H", changeParam(config.setBox), getBoxCorner, "", parseBoxCorner, R),
+            getBoxCorner
+        )
+        
         R += 2
-        options = ['SPOT', 'PUPILL DISK (M6)']
+        options = ['Image Beacon', 'Pupill Beacon', 'M6 mirror']
         optionVar = StringVar(self)
         
         def setMode(*a, v=optionVar):
             mstr = v.get()
-            if mstr[:2]=="PU":
-                config.setCenterMode(config.PUPILLMODE)
+            if mstr[:2]=="M6":
+                config.setCenterMode(config.M6MODE)
+            elif mstr[:2]=="Pu":
+                config.setCenterMode(config.M2BEACONMODE)
             else:
-                config.setCenterMode(config.SPOTMODE)
+                config.setCenterMode(config.BEACONMODE)                
             imageChanged()
             tmpImageChanged()
+            runClock()
         
         def getMode(options=options):
             m = config.getCenterMode()
-            if m == config.PUPILLMODE:
-                return options[1]
+            if m == config.M6MODE:
+                return options[2]
+            elif m == config.M2BEACONMODE:
+                return options[1]            
             else:
                 return options[0]
         
@@ -268,25 +272,32 @@ class ImageFrame(Frame):
         derotVar.set(fc())
         addToClock(derotVar, fc)
         
-        centerVar = StringVar(self)                    
-        fc = lambda self=self: getCenterStr(currentImage())
-        centerVar.set(fc())        
-        addToClock(centerVar, fc)
+        #centerVar = StringVar(self)                    
+        #fc = lambda self=self: getCenterStr(currentImage())
+        #centerVar.set(fc())        
+        #addToClock(centerVar, fc)
 
+        
+            
+        
         f0 = Frame(self)
         Label(f0, text="Measurements ").pack(side=LEFT)
         Label(f0, textvariable=counterVar).pack(side=LEFT)    
 
         
         f1 = Frame(self)                                    
-        Button(f1, text="Add", width=15, command=addTmpImage).pack(side=LEFT,  padx=PX)
-        Button(f1, text="Replace", width=15, command=replaceTmpImage).pack(side=LEFT, padx=PX)
+        Button(f1, text="Add", width=10, command=addTmpImage).pack(side=LEFT,  padx=PX)
+        Button(f1, text="Replace", width=10, command=replaceTmpImage).pack(side=LEFT, padx=PX)
+        
         
         f2 = Frame(self)
-       
-        Button(f2, text="Prev", width=10, command=previousImage).pack(side=LEFT, padx=PX)
-        Button(f2, text="Next", width=10, command=nextImage).pack(side=LEFT, padx=PX)
+        f22 = Frame(self)
+        Button(f22, text="Prev", width=10, command=previousImage).pack(side=LEFT, padx=PX)
+        Button(f22, text="Next", width=10, command=nextImage).pack(side=LEFT, padx=PX)
         Button(f2, text="Remove", width=10, command=removeImage).pack(side=LEFT, padx=PX)
+        Button(f2, text="Save",width=10, command=saveImage).pack(side=LEFT, padx=PX)
+        Button(f2, text="Save All",width=10, command=saveAll).pack(side=LEFT, padx=PX)
+        
         
         f3 = Frame(self)
         Label(f3, text="#").pack(side=LEFT)
@@ -295,14 +306,34 @@ class ImageFrame(Frame):
         Label(f3, textvariable=azVar).pack(side=LEFT)                        
         Label(f3, text="Derot: ").pack(side=LEFT)
         Label(f3, textvariable=derotVar).pack(side=LEFT)      
-        Label(f3, text="Center: ").pack(side=LEFT)
-        Label(f3, textvariable=centerVar).pack(side=LEFT) 
+        #Label(f3, text="Center: ").pack(side=LEFT)
+        #Label(f3, textvariable=centerVar).pack(side=LEFT) 
         
         f0.pack(side=TOP, pady=PY)        
         f1.pack(side=TOP, pady=PY)
         f2.pack(side=TOP, pady=PY)
+        f22.pack(side=TOP, pady=PY)
         f3.pack(side=TOP, pady=PY)
         
+        lb = Listbox(self, selectmode=SINGLE, height=5, width=40)
+        def updatelb(*a, lb=lb):
+            lb.delete(0, lb.size())
+            for i,p in enumerate(getImageList(), start=1):
+                if p.file:
+                    _, file = os.path.split(p.file)
+                else:
+                    file = ""
+                lb.insert(i, "{i:3d} {h[az]:5.1f} {h[derot]:5.1f} {file}".format(i=i, h=p.header, file=file))
+            lb.activate(getIndex())
+        
+        def onSelected(*a, lb=lb):
+            selected = lb.get(lb.curselection())
+            strnum, _, _ = selected.strip().partition(" ")
+            selectImage(int(strnum)-1)
+        
+        lb.bind('<<ListboxSelect>>', onSelected)
+        lb.pack(side=TOP)
+        addImageChangedTrace(updatelb)
         imageChanged()
         
         
@@ -436,7 +467,7 @@ def main(files=[]):
     MainFrame(root).pack()
     Button(root, text="Quit", width=10, command=quitGui).pack(side=TOP,  pady=10)
     
-    root.geometry("715x660+300+300")
+    root.geometry("715x800+300+300")
     clock()
     root.mainloop()
 

@@ -34,7 +34,7 @@ def plotPupillCut(p, l=None, fig=None):
     plotPupill(p, axes=axes[0][0])
     plotCut(p, "y", axes=axes[0][1])
     plotCut(p, "x", axes=axes[1][0])
-    if p.centerMode==config.PUPILLMODE:
+    if p.centerMode==config.M6MODE:
         plotMask(p, axes=axes[1][1])
     else:
         plotSubImage(p, axes=axes[1][1])
@@ -73,7 +73,7 @@ def plotAlign(p, l, fig=None, derotTol=0.1):
         
     plotCenter(roCenter, axes=axes[0], color="red")
     
-    if p.centerMode == config.PUPILLMODE:        
+    if p.centerMode == config.M6MODE:        
         sy = p.synthesize(roCenter)
         plotSubDifMask(p, sy, axes=axes[1])
         plotCenter(pc, axes=axes[0], color="red")
@@ -100,7 +100,7 @@ def plotCut(p, direction, slc=None, axes=None, fig=None):
     if  len(direction)<2:
         direction = direction+direction
 
-    (x0,y0),(x1,y1) = p.pupLocation 
+    (x0,y0),(x1,y1) = p.boxLocation 
     if isnan(np.sum(c)):               
         c = (x0+x1)/2.0, (y0+y1)/2.0
     
@@ -114,10 +114,12 @@ def plotCut(p, direction, slc=None, axes=None, fig=None):
         raise KeyError('unknown direction%s must be x or y'%direction)
     if direction[1]=='x':
         axes.plot(data,'k-')
-        axes.axhline(p.fluxTreshold, color='red')
+        if p.centerMode == config.M6MODE:
+            axes.axhline(p.fluxTreshold, color='red')
     else:
         axes.plot(data, np.arange(len(data)), 'k-')
-        axes.axvline(p.fluxTreshold, color='red')
+        if p.centerMode == config.M6MODE:               
+            axes.axvline(p.fluxTreshold, color='red')
     return axes
 
 def plotSubImage(p, axes=None, fig=None):
@@ -139,7 +141,7 @@ def plotSubMask(p, axes=None, fig=None):
 def plotPupill(p, axes=None, fig=None):
     axes, fig = getAxes(axes, fig)
     axes.imshow(p.data, origin='lower');
-    loc = p.pupLocation
+    loc = p.boxLocation
     x = [loc[0][0], loc[1][0],  loc[1][0], loc[0][0], loc[0][0]]
     y = [loc[0][1], loc[0][1], loc[1][1], loc[1][1], loc[0][1]]
     axes.plot( x,  y, 'k-')
@@ -257,7 +259,7 @@ def plotRunOut(l, axes=None, fig=None, leg=None, title="",fit=False):
             axes.plot(  r*np.cos(alpha)+x0, r*np.sin(alpha)+y0,  'r-')
         if not np.isnan(x0):
             axes.plot( x0, y0,  'r*')
-        if p.centerMode == config.PUPILLMODE:
+        if p.centerMode == config.M6MODE:
             pupDiam = np.mean( [p.getRadius() for p in l])*2
             runOut = r*2/pupDiam * 100
             axes.set_title('{x0:.2f},  {y0:.2f} runout {d:.2f} / {pupDiam:.0f} pixels => {runOut:.2f}%'.format(x0=x0,y0=y0,r=r,d=r*2, pupDiam=pupDiam, runOut=runOut))
