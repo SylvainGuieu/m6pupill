@@ -11,8 +11,29 @@ from . import cmd
 
 
 debug = True
-
 PX = 4
+PY = 4
+
+guiConfig = {
+    'expoMode': '1',
+    'expoModeList': ['1', 'forever'], 
+    'expoRunning': False,
+    'busy': False
+}
+
+def setExpoMode(mode):
+    guiConfig['expoMode'] = mode
+
+def getExpoMode():
+    return guiConfig['expoMode']
+
+def startExpo():
+    guiConfig['expoRunning'] = True
+
+def stopExpo():
+    guiConfig['expoRunning'] = False
+
+    
 
 def imageChangedGui(lst, current):    
     N = len(lst)
@@ -22,8 +43,7 @@ def imageChangedGui(lst, current):
         
 def tmpImageChangeGui(img):
     if img is None: return
-    fig = plot.plt.figure(plot.TMPFIG); fig.clear()
-    
+    fig = plot.plt.figure(plot.TMPFIG); fig.clear()    
     plot.plotPupillCut(img, fig=fig)
     plot.showfig(fig)
 
@@ -131,8 +151,8 @@ def addToClock(var, getFunc):
 def runClock():
     for (var,getFunc) in clockVars.values():
         var.set(getFunc())
-
-class PupillConfFrame(Frame):
+        
+class SetupFrame(Frame):
     def __init__(self,  master, **kwargs):
         Frame.__init__(self, master,  **kwargs)
                                 
@@ -141,41 +161,44 @@ class PupillConfFrame(Frame):
                 f(val)
                 imageChanged()
             return change
+
+        
+        f1 = Frame(self)
         
         R=0    
-        newEntry(self, "Treshold", changeParam(config.setTreshold), config.getTreshold, "", float, R)
+        newEntry(f1, "Treshold", changeParam(config.setTreshold), config.getTreshold, "", float, R)
 
         R += 1
-        newEntry(self, "Box x0 y0 W H", changeParam(config.setPupLocation), getBoxCorner, "", parseBoxCorner, R)        
+        newEntry(f1, "Box x0 y0 W H", changeParam(config.setPupLocation), getBoxCorner, "", parseBoxCorner, R)        
 
         R += 1
-        derotVar = newEntry(self, "Derot (degree)", cmd.moveDerot, cmd.getDerotPos, "", float, R, mode="set", default=0.0)
+        derotVar = newEntry(f1, "Derot (degree)", cmd.moveDerot, cmd.getDerotPos, "", float, R, mode="set", default=0.0)
         addToClock(derotVar,cmd.getDerotPos)
 
         R += 1
-        azVar= newEntry(self, "Az (degree)", cmd.moveAz, cmd.getAzPos, "", float, R, mode="set", default=0.0)
+        azVar= newEntry(f1, "Az (degree)", cmd.moveAz, cmd.getAzPos, "", float, R, mode="set", default=0.0)
         addToClock(azVar, cmd.getAzPos)
+
+        Label(self, text="Setup").pack(side=TOP)
+        f1.pack(side=TOP)
         
 
-class RefreshFrame(Frame):
+class ExpoFrame(Frame):
      def __init__(self,  master,  **kwargs):
         Frame.__init__(self, master, **kwargs)
+        
+        options = guiConfig['expoModeList']
+        optionVar = StringVar(self)
+        optionVar.set(getExpoMode())
+        optionVar.trace('w', lambda *a,v=optionVar: setExpoMode(v.get()))
 
-        Label(self, text="Attach").pack(side=LEFT)
-        refreshStatVar = BooleanVar(self)
-        refreshStatVar.set(getRefreshState())
-        refreshStatVar.trace('w', lambda *a,v=refreshStatVar: setRefreshState(v.get()))
-        Checkbutton(self, text="Auto Refresh", variable=refreshStatVar).pack(side=LEFT)
-        
-        addToClock(refreshStatVar, getRefreshState)
+        Label(self, text="Exposure").pack(side=TOP)
+        OptionMenu(self,optionVar, *options).pack(side=LEFT)
 
-        options = ["MANUAL", "LIVE"]
-        optionVar = StringVar()
-        optionVar.set(options[getRefreshState()])
-        #optionVar
+        Button(self, text="START", command=startExpo).pack(side=LEFT)
+        Button(self, text="STOP",  command=stopExpo).pack(side=LEFT)
         
-        
-        Button(self, text="Refresh", command=newTmpImage).pack(side=LEFT, padx=PX)        
+        #optionVar                
         runClock()
      
         
@@ -208,21 +231,25 @@ class ImageFrame(Frame):
         fc = lambda self=self: getCenterStr(currentImage())
         centerVar.set(fc())        
         addToClock(centerVar, fc)
-        
-        
-        f1 = Frame(self)
-        Label(f1, text="Counter").pack(side=LEFT)
-        Label(f1, textvariable=counterVar).pack(side=LEFT)                        
-        Button(f1, text="Measure", width=15, command=newImage).pack(side=LEFT,  padx=PX)
-        Button(f1, text="Replace", width=15, command=replaceImage).pack(side=LEFT, padx=PX)
 
+        f0 = Frame(self)
+        Label(f0, text="Measurements ").pack(side=LEFT)
+        Label(f0, textvariable=counterVar).pack(side=LEFT)    
+
+        
+        f1 = Frame(self)                                    
+        Button(f1, text="Add", width=15, command=addTmpImage).pack(side=LEFT,  padx=PX)
+        Button(f1, text="Replace", width=15, command=replaceTmpImage).pack(side=LEFT, padx=PX)
+        
         f2 = Frame(self)
-        Label(f2, textvariable=indexVar).pack(side=LEFT) 
-        Button(f2, text="Prev", width=10, command=previousImage).pack(side=LEFT)
-        Button(f2, text="Next", width=10, command=nextImage).pack(side=LEFT)
-        Button(f2, text="Remove", width=10, command=removeImage).pack(side=LEFT)
+       
+        Button(f2, text="Prev", width=10, command=previousImage).pack(side=LEFT, padx=PX)
+        Button(f2, text="Next", width=10, command=nextImage).pack(side=LEFT, padx=PX)
+        Button(f2, text="Remove", width=10, command=removeImage).pack(side=LEFT, padx=PX)
         
         f3 = Frame(self)
+        Label(f3, text="#").pack(side=LEFT)
+        Label(f3, textvariable=indexVar).pack(side=LEFT) 
         Label(f3, text="Az: ").pack(side=LEFT)
         Label(f3, textvariable=azVar).pack(side=LEFT)                        
         Label(f3, text="Derot: ").pack(side=LEFT)
@@ -230,10 +257,10 @@ class ImageFrame(Frame):
         Label(f3, text="Center: ").pack(side=LEFT)
         Label(f3, textvariable=centerVar).pack(side=LEFT) 
         
-        
-        f1.pack(side=TOP)
-        f2.pack(side=TOP)
-        f3.pack(side=TOP)
+        f0.pack(side=TOP, pady=PY)        
+        f1.pack(side=TOP, pady=PY)
+        f2.pack(side=TOP, pady=PY)
+        f3.pack(side=TOP, pady=PY)
         
         imageChanged()
         
@@ -249,8 +276,9 @@ class RunFrame(Frame):
     def __init__(self,  master, **kwargs):
         Frame.__init__(self, master, **kwargs)
         
+        Label(self, text="Sequence").pack(side=TOP)  
         fd = Frame(self)
-        Label(fd, text="Derotator Run Out: ").pack(side=LEFT)  
+        Label(fd, text="Derotator : ").pack(side=LEFT)  
         
         fdp = Frame(fd)     
         newEntry(fdp, "Step", self.setDerotStep, self.getDerotStep,
@@ -263,7 +291,7 @@ class RunFrame(Frame):
         
         
         fa = Frame(self)
-        Label(fa, text="Azimuth Run Out: ").pack(side=LEFT)  
+        Label(fa, text="Azimuth : ").pack(side=LEFT)  
         
         fdp = Frame(fa)     
         newEntry(fdp, "Step", self.setAzStep, self.getAzStep,
@@ -291,6 +319,7 @@ class RunFrame(Frame):
         log = print
         current = cmd.getDerotPos()
         angles = np.linspace(current, 360+current, int(360/self.derotStep)+1)
+        stopExpo()
         for angle in angles:
             log("rotating to Derotator %.1f "%angle, end="...")
             cmd.moveDerot(angle)
@@ -303,6 +332,7 @@ class RunFrame(Frame):
         log = print
         current = cmd.getAzPos()
         angles = np.linspace(current, 360+current, int(360/self.azStep)+1)[:-1]
+        stopExpo()
         for angle in angles:
             log("rotating to Azimuth %.1f "%angle, end="...")
             cmd.moveAz(angle)
@@ -318,8 +348,8 @@ class RunFrame(Frame):
 class MainFrame(Frame):
     def __init__(self,  master, **kwargs):
         Frame.__init__(self, master, **kwargs)
-        PupillConfFrame(self).pack(side=TOP, pady=15)
-        RefreshFrame(self).pack(side=TOP, pady=15)
+        SetupFrame(self).pack(side=TOP, pady=15)
+        ExpoFrame(self).pack(side=TOP, pady=15)
         ImageFrame(self).pack(side=TOP, pady=15)
         RunFrame(self).pack(side=TOP, pady=15)
         
@@ -340,6 +370,11 @@ def _destroy(event):
 def clock():
     global root
     runClock()
+    if guiConfig['expoRunning']:        
+        newTmpImage()
+        if not guiConfig['expoMode']=="forever": guiConfig['expoRunning'] = False
+        
+    
     root.after(1000, clock)
     
 def main(files=[]):  
@@ -358,7 +393,7 @@ def main(files=[]):
     MainFrame(root).pack()
     Button(root, text="Quit", width=10, command=quitGui).pack(side=TOP,  pady=10)
     
-    root.geometry("800x480+300+300")
+    root.geometry("715x620+300+300")
     clock()
     root.mainloop()
 

@@ -75,18 +75,34 @@ def nImage():
     global imageList
     return len(imageList)
 
+
+
 def newImage():
+    addImage(M6Pupill.fromCcd())
+    
+def addImage(img):
     global imageList, imageListIndex
-    imageList.appendFromCcd()
+    imageList.append(img)
     imageListIndex = nImage()-1
     imageChanged()
-
-def replaceImage():
-    global imageList, imageListIndex
-    new = M6Pupill.fromCcd()
-    imageListIndex = imageList.replace(new)    
-    imageChanged()
     
+def replaceImage(img):
+    global imageList, imageListIndex
+    imageListIndex = imageList.replace(img)    
+    imageChanged()
+
+def addTmpImage():
+    global imageList, tmpImage
+    if tmpImage is not None:
+        if tmpImage not in imageList.lst:
+            addImage(tmpImage)
+
+def replaceTmpImage():
+    global imageList, tmpImage
+    if tmpImage is not None:
+        if tmpImage not in imageList.lst:
+            replaceImage(tmpImage)
+            
 def setImageList(lst, index=None):
     global imageList, imageListIndex
     imageList = lst

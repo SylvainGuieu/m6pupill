@@ -72,6 +72,7 @@ def plotPupill(p, axes=None, fig=None):
     return axes
 
 
+
 def plotMask(p, axes=None, fig=None):
     axes, fig = getAxes(axes, fig)
         

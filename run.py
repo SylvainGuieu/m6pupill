@@ -110,7 +110,6 @@ def runAz(l=None, angles=None, prefix="", derot=None, closure=False):
     return l
 
 
-
 def runAlign(refPupill, pause=1):
 
     fig = plot.figure(2); fig.clear()
