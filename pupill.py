@@ -93,8 +93,11 @@ class M6Pupill:
     def getCenter(self):
         if self.centerMode == config.PUPILLMODE:
             return compute.pupillCenter(self.getMask())
-        else:            
-            return compute.spotCenter(*self.getSubImage())
+        else:
+            img, offset = self.getSubImage()
+            mask, _ = self.getSubMask()
+            
+            return compute.spotCenter(img*mask, offset)
     
     def getSubImage(self):        
         (x0,y0),(x1,y1) = self.pupLocation

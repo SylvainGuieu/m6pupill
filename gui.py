@@ -157,6 +157,8 @@ def runClock():
         var.set(getFunc())
 
 
+
+        
 class ComputingFrame(Frame):
     def __init__(self,  master, **kwargs):
         Frame.__init__(self, master,  **kwargs)
@@ -362,8 +364,9 @@ class RunFrame(Frame):
         for angle in angles:
             log("rotating to Derotator %.1f "%angle, end="...")
             cmd.moveDerot(angle)
-            log ("ok")
-            newImage()
+            log ("ok")            
+            newTmpImage()
+            addTmpImage()
             if config.autoSaveImage:
                 log("image saved", io.savePup(currentImage()))
     
@@ -376,7 +379,8 @@ class RunFrame(Frame):
             log("rotating to Azimuth %.1f "%angle, end="...")
             cmd.moveAz(angle)
             log ("ok")
-            newImage()
+            newTmpImage()
+            addTmpImage()
             if config.autoSaveImage:
                 log("image saved", io.savePup(currentImage()))
                     

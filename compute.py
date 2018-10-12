@@ -2,6 +2,7 @@ import numpy as np
 from scipy.ndimage.interpolation import shift
 from scipy.optimize import curve_fit
 from scipy.ndimage.measurements import center_of_mass
+from scipy.ndimage import label
 
 def pupillCenter(mask):
     shape = mask.shape
@@ -11,8 +12,22 @@ def pupillCenter(mask):
     y = np.sum(mask*Y)/norm
     return x,y
 
-def spotCenter(img, offset=[0,0]):    
-    com = center_of_mass(img)
+def centerOfMass(img):
+    mask = img>(np.median(img)+ 1.5*np.std(img))
+    img = img*mask
+    
+    shape = img.shape
+    X, Y = np.meshgrid(range(shape[1]), range(shape[0]) )
+    norm = float(np.sum(img))
+    x = np.sum(img*X)/norm
+    y = np.sum(img*Y)/norm
+    return x,y
+    
+def spotCenter(img, offset=[0,0]):        
+    #img = img - np.median(img)
+    #lb, _ = label(img)
+    com = centerOfMass(img)
+    print(com)
     return com[0]+offset[0], com[1]+offset[1]
 
 def radius(mask):
@@ -29,10 +44,12 @@ def runout(centers, angles=None):
     if N<2: return (np.nan, np.nan), np.nan
     if N==2:
         if angles is None: return (np.nan, np.nan), np.nan
-        if np.abs( angles[0] - angles[1])<1.0:
-            r = np.sqrt( (centers[0,0]-centers[1,0])**2,  (centers[0,1]-centers[1,1])**2 )/2.0
-            return (np.mean(centers[:,0]), np.mean(centers[:,1])),  r
-        
+        if np.abs( angles[0] - angles[1] - 180)<1.0:
+            d = np.sqrt( (centers[0,0]-centers[1,0])**2 +\
+                         (centers[0,1]-centers[1,1])**2 )
+            return (np.mean(centers[:,0]), np.mean(centers[:,1])),  d/2.0
+        else:
+            return (np.nan, np.nan), np.nan
     
     r = max(  (max(centers[:,0]) - min(centers[:,0]))/2.0,  (max(centers[:,1]) - min(centers[:,1]))/2.0 ) 
     params = [np.mean( centers[:,0]), np.mean( centers[:,1]),  r]

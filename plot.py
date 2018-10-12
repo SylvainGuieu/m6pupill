@@ -38,9 +38,10 @@ def plotPupillCut(p, l=None, fig=None):
         plotMask(p, axes=axes[1][1])
     else:
         plotSubImage(p, axes=axes[1][1])
+
+    plotCenter(p.getCenter(),axes=axes[1][1])
     if l:
-        plotRunOutCenters(l, axes=(axes[0][0],axes[1][1]))
-        
+        plotRunOutCenters(l, axes=(axes[0][0],axes[1][1]))       
     return fig
 
 def plotAlign(p, l, fig=None, derotTol=0.1):
@@ -81,7 +82,7 @@ def plotAlign(p, l, fig=None, derotTol=0.1):
     else:
         x = [roCenter[0], pc[0]]
         y = [roCenter[1], pc[1]]
-        r = np.sqrt( x**2 + y**2)
+        r = np.sqrt( (x[0]-x[1])**2 + (y[0]-y[1])**2)
         axes[1].plot(x, y, "-+k")
         size = max( r*2, 10)*1.2
         axes.set_xlin( roCenter[0]-size/2.0, roCenter[0]+size/2.0)
@@ -300,12 +301,14 @@ def runPlot(l, p=None):
     showfig(fig)
     
     for i,(derot,laz) in enumerate(l.byDerot().items()):
+        laz = laz.sortedKey('az') 
         fnum = (i+1)*10
         fig = plt.figure(fnum); fig.clear()
         fig = plotRunOut(laz,fit=True,fig=fnum).figure
         showfig(fig)
         
     for i,(derot,lderot) in enumerate(l.byAz().items()):
+        lderot = lderot.sortedKey('derot') 
         fnum = (i+1)*100
         fig = plt.figure(fnum); fig.clear()
         fig = plotRunOut(lderot,fit=False,fig=fnum).figure

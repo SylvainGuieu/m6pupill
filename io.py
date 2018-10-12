@@ -38,7 +38,7 @@ def saveList(l, prefix=""):
 
 def savePup(p, prefix=""):
     h = p.header
-    file = os.path.join(detdata(), "{prefix}AT{h[at]:d}_Az{h[az]:03.0f}_Derot{h[derot]:03.0f}.fits".format(h=h, prefix=prefix))
+    file = os.path.join(detdata(), "{prefix}AT{h[at]:d}_Az{h[az]:03.0f}_Derot{h[derot]:03.0f}_{day}.fits".format(h=h, prefix=prefix, day=getDayNumber()))
     file = newFile(file)
     fh = fits.HDUList([fits.PrimaryHDU(p.data, dict2fitsHeader(p.header))])
     fh.writeto(file, overwrite=True)
