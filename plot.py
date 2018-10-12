@@ -51,27 +51,27 @@ def plotAlign(p, l, fig=None, derotTol=0.1):
     fig, axes = plt.subplots(1,2, num=fig.number);
     axes = axes.flat
     if l is None or not l:
-        axes[0].text(0.0. 0.0, "Not enough measurements")
+        axes[0].text(0.0, 0.0, "Not enough measurements")
         return fig
     d = l.byDerot()
     for r, subl in d.items():
         if np.abs(p.derot-r) <= derotTol:
             break
     else:
-        axes[0].text(0.0. 0.0, "Cannot find measurements for current Rotator pos")
+        axes[0].text(0.0, 0.0, "Cannot find measurements for current Rotator pos")
         return fig    
     
-        plotSubImage(p, axes=axes[0])
-        pc = p.getCenter()
-        plotCenter(pc, axes=axes[0], color="black")
+    plotSubImage(p, axes=axes[0])
+    pc = p.getCenter()
+    plotCenter(pc, axes=axes[0], color="black")
         
-        roCenter = subl.getRunout()
-        if roCenter is None or np.isnan(np.mean(roCenter)):
-            axes[1].text(0.0. 0.0, "Cannot compute RunOut center")
-            return fig
+    roCenter, _ = subl.getRunout()
+    if roCenter is None or np.isnan(np.mean(roCenter)):
+        axes[1].text(0.0, 0.0, "Cannot compute RunOut center")
+        return fig
         
-        plotCenter(roCenter, axes=axes[0], color="red")
-        
+    plotCenter(roCenter, axes=axes[0], color="red")
+    
     if p.centerMode == config.PUPILLMODE:        
         sy = p.synthesize(roCenter)
         plotSubDifMask(p, sy, axes=axes[1])
@@ -123,15 +123,16 @@ def plotSubImage(p, axes=None, fig=None):
     axes, fig = getAxes(axes, fig)
     data, (x0,y0) = p.getSubImage()
     h,w = data.shape
-    extend = (x0, y0, x0+w, y0+w)
-    axes.imshow(data, origin='lower', extend=extend);
+    
+    extent = (x0, x0+w, y0, y0+w)
+    axes.imshow(data, origin='lower', extent=extent);
 
 def plotSubMask(p, axes=None, fig=None):
     axes, fig = getAxes(axes, fig)
     data, (x0,y0) = p.getSubMask()
     h,w = data.shape
-    extend = (x0, y0, x0+w, y0+w)
-    axes.imshow(data, origin='lower', extend=extend);
+    extent = (x0, x0+w, y0, y0+w)
+    axes.imshow(data, origin='lower', extent=extent);
     
     
 def plotPupill(p, axes=None, fig=None):
@@ -166,6 +167,8 @@ def plotRunOutCenters(lst,  axes=None, fig=None, size=10, color="red"):
             c,r = l.getRunout()
         except Exception as e:
             print(e)
+            return axes[0]
+        
         if c is None: continue
         if np.isnan(np.mean(c)): continue
         
@@ -200,7 +203,7 @@ def plotDifMask(p1, p2, axes=None, fig=None):
     axes.set_title("%.4f%%"%(prop*100))
     return axes
 
-def plotSubDifMask(p, axes=None, fig=None):
+def plotSubDifMask(p1, p2, axes=None, fig=None):
     axes, fig = getAxes(axes, fig)
 
     m2, (x0,y0) = p2.getSubMask()
@@ -210,9 +213,9 @@ def plotSubDifMask(p, axes=None, fig=None):
     norm = np.sum(m2)
     prop = np.abs(np.sum(~dMask[m2])/norm)
     
-    h,w = data.shape
-    extend = (x0, y0, x0+w, y0+w)
-    axes.imshow(dMask, origin='lower', extend=extend);
+    h,w = dMask.shape
+    extent = (x0, x0+w, y0, y0+w)
+    axes.imshow(dMask, origin='lower', extent=extent);
     axes.set_title("%.4f%%"%(prop*100))
     return axes
 
@@ -245,15 +248,20 @@ def plotRunOut(l, axes=None, fig=None, leg=None, title="",fit=False):
         if not np.isnan(np.sum(c)):
             axes.text(  c[0],c[1], fmt.format(h=p.header))
     
-    if fit and len(l)>=3:
-        (x0,y0), r = compute.runout(centers)
+    if fit and len(l)>=2:
+        (x0,y0), r = compute.runout(centers, [p.az for p in l])
         
         alpha = np.linspace(0,2*np.pi, 100)
-        axes.plot(  r*np.cos(alpha)+x0, r*np.sin(alpha)+y0,  'r-')  
-        axes.plot( x0, y0,  'r*')
-        pupDiam = np.mean( [p.getRadius() for p in l])*2
-        runOut = r*2/pupDiam * 100
-        axes.set_title('{x0:.2f},  {y0:.2f} runout {d:.2f} / {pupDiam:.0f} pixels => {runOut:.2f}%'.format(x0=x0,y0=y0,r=r,d=r*2, pupDiam=pupDiam, runOut=runOut)) 
+        if not np.isnan(r):
+            axes.plot(  r*np.cos(alpha)+x0, r*np.sin(alpha)+y0,  'r-')
+        if not np.isnan(x0):
+            axes.plot( x0, y0,  'r*')
+        if p.centerMode == config.PUPILLMODE:
+            pupDiam = np.mean( [p.getRadius() for p in l])*2
+            runOut = r*2/pupDiam * 100
+            axes.set_title('{x0:.2f},  {y0:.2f} runout {d:.2f} / {pupDiam:.0f} pixels => {runOut:.2f}%'.format(x0=x0,y0=y0,r=r,d=r*2, pupDiam=pupDiam, runOut=runOut))
+        else:
+           axes.set_title('{x0:.2f},  {y0:.2f} runout {d:.2f} pixels'.format(x0=x0,y0=y0,r=r,d=r*2)) 
     return axes
 
 

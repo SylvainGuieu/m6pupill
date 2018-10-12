@@ -218,8 +218,8 @@ class M6PupillList:
     def sortedKey(self, k):
         return self.__class__(sorted(self, key=lambda p, k=k: p.header[k]))  
 
-    def getRunout(self):
-        return compute.runout(self.getCenters())
+    def getRunout(self, rtype="az"):
+        return compute.runout(self.getCenters(), [p.header[rtype] for p in self])
     
     def byKey(self, key, nMin=1, ndigits=0):
         items = {}

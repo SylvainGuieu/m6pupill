@@ -2,6 +2,7 @@ import os
 import re
 from . import config
 from astropy.io import fits
+import datetime
 
 keyTypes = {'az':float, 'derot':float, 'at':int}
 
@@ -71,7 +72,9 @@ def dict2fitsHeader(d):
     return fits.Header(hList)
 
 
-
+def getDayNumber():
+    now = datetime.datetime.now()
+    return (datetime.date(now.year, now.month, now.day) - datetime.date(now.year, 1, 1)).days + 1
 
 
 

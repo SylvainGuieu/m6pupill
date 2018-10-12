@@ -20,8 +20,20 @@ def radius(mask):
 
 def circle(x,  x0,  y0, r ) :
     return np.sqrt( r**2 - (x-x0)**2) + y0
+
+
+
+def runout(centers, angles=None):
+
+    N = len(centers)
+    if N<2: return (np.nan, np.nan), np.nan
+    if N==2:
+        if angles is None: return (np.nan, np.nan), np.nan
+        if np.abs( angles[0] - angles[1])<1.0:
+            r = np.sqrt( (centers[0,0]-centers[1,0])**2,  (centers[0,1]-centers[1,1])**2 )/2.0
+            return (np.mean(centers[:,0]), np.mean(centers[:,1])),  r
+        
     
-def runout(centers):   
     r = max(  (max(centers[:,0]) - min(centers[:,0]))/2.0,  (max(centers[:,1]) - min(centers[:,1]))/2.0 ) 
     params = [np.mean( centers[:,0]), np.mean( centers[:,1]),  r]
     pout, pcov = curve_fit(circle, centers[:,0], centers[:,1], p0=params) 
@@ -29,4 +41,8 @@ def runout(centers):
 
 def circle(x,  x0,  y0, r ) :
     return np.sqrt( r**2 - (x-x0)**2) + y0
+
+
+
+
 

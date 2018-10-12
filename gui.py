@@ -43,10 +43,12 @@ def imageChangedGui(lst, current):
 def tmpImageChangeGui(img):
     if img is None: return
     fig = plot.plt.figure(plot.TMPFIG); fig.clear()    
-    plot.plotPupillCut(img, getImageList(), getPufig=fig)
+    plot.plotPupillCut(img, getImageList(), fig=fig)
     plot.showfig(fig)
-    if len(getImageList()>1):
-        plot.plotAlign(getImageList(), fig=plot.ALIGNFIG)
+    if len(getImageList())>1:
+        fig = plot.plt.figure(plot.ALIGNFIG); fig.clear() 
+        plot.plotAlign(img, getImageList(), fig=fig)
+        plot.showfig(fig)
     
 
 def parseBoxCorner(sval):
@@ -163,6 +165,7 @@ class ComputingFrame(Frame):
             def change(val):
                 f(val)
                 imageChanged()
+                tmpImageChanged()
             return change
         
         
@@ -185,6 +188,7 @@ class ComputingFrame(Frame):
             else:
                 config.setCenterMode(config.SPOTMODE)
             imageChanged()
+            tmpImageChanged()
         
         def getMode(options=options):
             m = config.getCenterMode()

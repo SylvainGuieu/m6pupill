@@ -1,6 +1,6 @@
 import os
 
-simulate = True
+simulate = False
 
 atConfLoockup = { # loockup by at 
      1: dict( fluxTreshold = 1550,  pupLocation =  [ [367,404], [682,670]] ), 
