@@ -44,33 +44,21 @@ def plotPupillCut(p, l=None, fig=None):
         plotRunOutCenters(l, axes=(axes[0][0],axes[1][1]))       
     return fig
 
-def plotAlign(p, l, fig=None, derotTol=0.1):
-    
-    fig = getFigure(fig)
-        
-    fig.clear()
-    fig, axes = plt.subplots(1,2, num=fig.number);
-    axes = axes.flat
-    if l is None or not l:
-        axes[0].text(0.0, 0.0, "Not enough measurements")
-        return fig
-    d = l.byDerot()
-    for r, subl in d.items():
-        if np.abs(p.derot-r) <= derotTol:
-            break
-    else:
-        axes[0].text(0.0, 0.0, "Cannot find measurements for current Rotator pos")
-        return fig    
+def plotImageAlign(p, roCenter, axesList=None, fig=None):
+    if axesList is None:
+        fig = getFigure(fig)        
+        fig.clear()
+        fig, axesList = plt.subplots(1,2, num=fig.number);
+    axesList = axesList.flat
+    [a.clear() for a in axesList]
     
     plotSubImage(p, axes=axes[0])
     pc = p.getCenter()
     plotCenter(pc, axes=axes[0], color="black")
-        
-    roCenter, _ = subl.getRunout()
+    
     if roCenter is None or np.isnan(np.mean(roCenter)):
         axes[1].text(0.0, 0.0, "Cannot compute RunOut center")
         return fig
-        
     plotCenter(roCenter, axes=axes[0], color="red")
     
     if p.centerMode == config.M6MODE:        
@@ -86,8 +74,28 @@ def plotAlign(p, l, fig=None, derotTol=0.1):
         axes[1].plot(x, y, "-+k")
         size = max( r*2, 10)*1.2
         axes.set_xlin( roCenter[0]-size/2.0, roCenter[0]+size/2.0)
-        axes.set_ylin( roCenter[1]-size/2.0, roCenter[1]+size/2.0)
-
+        axes.set_ylin( roCenter[1]-size/2.0, roCenter[1]+size/2.0)        
+    return axesList
+    
+def plotAlign(p, l, fig=None, derotTol=0.1):
+    
+    fig = getFigure(fig)        
+    fig.clear()
+    fig, axes = plt.subplots(1,2, num=fig.number);
+        
+    axes = axes.flat
+    if l is None or not l:
+        axes[0].text(0.0, 0.0, "Not enough measurements")
+        return fig
+    d = l.byDerot()
+    for r, subl in d.items():
+        if np.abs(p.derot-r) <= derotTol:
+            break
+    else:
+        axes[0].text(0.0, 0.0, "Cannot find measurements for current Rotator pos")
+        return fig    
+    roCenter, r = subl.getRunout()
+    plotImageAlign(p, roCenter, axesList=axes)
     return fig 
     
     

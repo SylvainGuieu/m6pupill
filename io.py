@@ -33,16 +33,30 @@ def readFitsData(file):
      data = fh.data.copy()     
      return data, header
  
-def saveList(l, prefix=""):
-    return [savePup(p,prefix=prefix) for p in l]
+def saveImageList(l, prefix=""):
+    return [saveImage(p,prefix=prefix) for p in l]
 
-def savePup(p, prefix=""):
+def saveImage(p, file=None, prefix=""):
     h = p.header
-    file = os.path.join(detdata(), "{prefix}AT{h[at]:d}_Az{h[az]:03.0f}_Derot{h[derot]:03.0f}_{day}.fits".format(h=h, prefix=prefix, day=getDayNumber()))
-    file = newFile(file)
+    if file is None:
+        file = os.path.join(detdata(), "{prefix}AT{h[at]:d}_Az{h[az]:03.0f}_Derot{h[derot]:03.0f}_{day}.fits".format(h=h, prefix=prefix, day=getDayNumber()))
+        file = newFile(file)
     fh = fits.HDUList([fits.PrimaryHDU(p.data, dict2fitsHeader(p.header))])
     fh.writeto(file, overwrite=True)
     return file
+
+def saveTable(l, file):    
+    if file is None:
+        file = os.path.join(detdata(), getattr(l, "fileCoreName", "tmp"))
+        file += ".tbl"
+        
+    h,tbl = l.getTable()
+    with open(file, "w") as f:
+        f.write(h+"\n")
+        "\n".join(tbl)
+    return file
+
+
 
 def newFile(file):
     directory, fileName = os.path.split(file)

@@ -1,4 +1,5 @@
 import os
+import time
 
 simulate = False
 
@@ -6,7 +7,7 @@ M6MODE = 1
 BEACONMODE, M2BEACONMODE, M6MODE = range(3)
 
 
-atConfLoockup = { # loockup by at
+atConfLoockup = {# loockup by at
     M6MODE : {
         1: dict(  fluxTreshold = 1550,  box = [(524.5, 537.0), 315] ), 
         2: dict(  fluxTreshold = 1550,  box = [(524.5, 525.0), 315] ),
@@ -31,6 +32,8 @@ atConfLoockup = { # loockup by at
 }
 
 centerMode = M6MODE
+startupTime = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())
+
 
 def setTreshold(treshold, at=None, centerMode=None):
     at = getAt() if at is None else at

@@ -42,7 +42,7 @@ def runout(centers, angles=None):
     if N<2: return (np.nan, np.nan), np.nan
     if N==2:
         if angles is None: return (np.nan, np.nan), np.nan
-        if np.abs( angles[0] - angles[1] - 180)<1.0:
+        if np.abs( np.abs(angles[0] - angles[1]) - 180)<1.0:
             d = np.sqrt( (centers[0,0]-centers[1,0])**2 +\
                          (centers[0,1]-centers[1,1])**2 )
             return (np.mean(centers[:,0]), np.mean(centers[:,1])),  d/2.0

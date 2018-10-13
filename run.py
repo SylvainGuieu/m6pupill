@@ -7,34 +7,24 @@ except:
     from . import cmdSimu as cmd
 
 from . import io
-from .pupill import M6PupillList, M6Pupill 
+from .image import ImageList, Image 
 import numpy as np 
 
 log = print
-
-
-def parseAngles(current, angles, closure):
-    if angles is None:        
-        angles = np.linspace(0, 360, int(360/15)+1)%360
-    elif not hasattr(angles, "__iter__"):
-        curent = cmd.getDerotPos()
-        angles = np.linspace(current, 360+current, int(360/angles)+1)
-    if not closure: 
-        angle = angle[:-1]
-    return angles
     
-def runDerot(l=None, angles=None, prefix="", az=None, closure=1):
-    if l is None: l =  M6PupillList([])
+def runDerot(l=None, angles=None, prefix="", az=None, closure=1, callback=None):
     
-
+    if l is None: l =  ImageList([])
+    
     if az is not None:
         log("rotating Azimuth to %.1f "%az, end="...")
         cmd.moveAz(az)
         log ("ok")
     else:
-        az = -999.99
+        az = cmd.getAzPos()
     
-    angles = parseAngles(cmd.getDerotPos(), 15 if angles is None else angles, closure)
+    if angles is None:
+        angles = np.linspace(0,360,360/15+1)
     
     plot.runPlotStart()
     #runCheckFromPrompt(at=config.getAt())
@@ -44,12 +34,13 @@ def runDerot(l=None, angles=None, prefix="", az=None, closure=1):
         log ("ok")
         l.appendFromCcd(header={'derot':cmd.getDerotPos(), 'az':cmd.getAzPos()})
         if config.autoSaveImage:
-            log("image saved", io.savePup(l[-1], prefix=prefix))
+            log("image saved", io.saveImage(l[-1], prefix=prefix))
         plot.runPlot(l)
+        if callback: callback()
     return l
 
-def runAz(l=None, angles=None, prefix="", derot=None, closure=False):
-    if l is None: l =  M6PupillList([])
+def runAz(l=None, angles=None, prefix="", derot=None, closure=False, callback=None):
+    if l is None: l =  ImageList([])
     
     if derot is not None:
         log("rotating Derotator to %.1f "%derot, end="...")
@@ -58,8 +49,8 @@ def runAz(l=None, angles=None, prefix="", derot=None, closure=False):
     else:
         derot = -999.99
     
-    
-    angles = parseAngles(cmd.getAzPos(), 30 if angles is None else angles, closure)
+    if angles is None:
+        angles = np.linspace(0,360,360/30+1)[:-1]
         
     
     plot.runPlotStart()
@@ -71,28 +62,18 @@ def runAz(l=None, angles=None, prefix="", derot=None, closure=False):
         log ("ok")
         if config.autoSaveImage:
             l.appendFromCcd(header={'derot':cmd.getDerotPos(), 'az':cmd.getAzPos()})
-        log("image saved", io.savePup(l[-1], prefix=prefix))
+        log("image saved", io.saveImage(l[-1], prefix=prefix))
         plot.runPlot(l)
+        if callback: callback()
     return l
 
-
-def runAlign(refPupill, pause=1):
-
-    fig = plot.figure(2); fig.clear()
-    i = 0
-    axes = None
-    xlim = None
+def runAlign(roCenter, pause=1, callback=None):    
+    fig = plot.figure(plot.ALIGNFIG); fig.clear()
+    fig, axesList = plt.subplots(1,2, num=fig.number)    
+    i = 0    
     while True:
         i += 1
-        if axes:
-            xlim = axes.get_xlim()
-            ylim = axes.get_ylim()
-            axes.clear()
-        axes = plot.plotDifMask(M6Pupill.fromCcd(), refPupill, fig=2)
-        if xlim:
-            axes.set_xlim(xlim)
-            axes.set_ylim(ylim)
-            
+        plot.plotAlignImage(Image.fromCcd(), roCenter, axesList=axesList)                    
         plot.showfig(fig)
         plot.plt.pause(pause)
         log('expo %d'%i)

@@ -1,142 +1,139 @@
-from .pupill import M6PupillList, M6Pupill
+from .image import ImageList, Image
 from . import io
-tmpImage = None
+image = None
 
-imageList = M6PupillList([])
-imageListIndex = -1
+measurementList = ImageList([])
+measurementIndex = -1
 
-imageChangedEvents = []
-newTmpImageEvents = []
-def addImageChangedTrace(callable):
+measurementChangedEvents = []
+imageChangedEvents  = []
+def addMeasurementChangedTrace(callable):
+    global measurementChangedEvents
+    if not hasattr(callable, "__call__"):
+        raise ValueError("expecting a callable")
+    measurementChangedEvents.append(callable)
+
+def addNewImageTrace(callable):
     global imageChangedEvents
     if not hasattr(callable, "__call__"):
         raise ValueError("expecting a callable")
     imageChangedEvents.append(callable)
-
-def addTmpImageTrace(callable):
-    global newTmpImageEvents
-    if not hasattr(callable, "__call__"):
-        raise ValueError("expecting a callable")
-    newTmpImageEvents.append(callable)
     
+def measurementChanged():
+    global measurementChangedEvents
+    global measurementList, measurementIndex
+    for f in measurementChangedEvents:
+        f(measurementList, currentMeasurement())
+
 def imageChanged():
     global imageChangedEvents
-    global imageList, imageListIndex
+    global image
     for f in imageChangedEvents:
-        f(imageList, currentImage())
+        f(image)
 
-def tmpImageChanged():
-    global newTmpImageEvents
-    global tmpImage
-    for f in newTmpImageEvents:
-        f(tmpImage)
-
-def saveImage():
-    img = currentImage()
+def saveMeasurement():
+    img = currentMeasurement()
     if img.file: return 
-    img.file = io.savePup(img)
-    imageChanged()
+    img.file = io.saveImage(img)
+    measurementChanged()
 
 def saveAll():
-    for img in getImageList():
-        img.file = io.savePup(img)
-    imageChanged()
+    for img in getMeasurementList():
+        img.file = io.saveImage(img)
+    measurementChanged()
     
-def currentImage():
-    global imageList, imageListIndex
-    N = len(imageList)
+def currentMeasurement():
+    global measurementList, measurementIndex
+    N = len(measurementList)
     if not N: return 
-    return imageList[imageListIndex]
+    return measurementList[measurementIndex]
 
 def getIndex():
-    global imageList, imageListIndex
-    return imageListIndex
+    global measurementList, measurementIndex
+    return measurementIndex
 
-def getImageList():
-    global imageList, imageListIndex
-    return imageList
+def getMeasurementList():
+    global measurementList, measurementIndex
+    return measurementList
 
-def nextImage():
-    global imageList, imageListIndex
-    N = len(imageList)
-    if imageListIndex>=(N-1): return 
-    imageListIndex += 1
-    imageChanged()
+def nextMeasurement():
+    global measurementList, measurementIndex
+    N = len(measurementList)
+    if measurementIndex>=(N-1): return 
+    measurementIndex += 1
+    measurementChanged()
 
-
-def selectImage(index):
-    global imageList, imageListIndex
-    N = len(imageList)
+def selectMeasurement(index):
+    global measurementList, measurementIndex
+    N = len(measurementList)
     if index>=0 and index<N:
-        imageListIndex = index
-        imageChanged()
+        measurementIndex = index
+        measurementChanged()
     
-def previousImage():
-    global imageList, imageListIndex
-    N = len(imageList)
-    if imageListIndex<=0 or not N: return 
-    imageListIndex -= 1
-    imageChanged()
+def previousMeasurement():
+    global measurementList, measurementIndex
+    N = len(measurementList)
+    if measurementIndex<=0 or not N: return 
+    measurementIndex -= 1
+    measurementChanged()
 
-def removeImage():
-    global imageList, imageListIndex
-    N = len(imageList)
+def removeMeasurement():
+    global measurementList, measurementIndex
+    N = len(measurementList)
     if not N: return 
-    imageList.lst.remove(currentImage())
-    N = len(imageList)
-    if not N: imageListIndex = -1
+    measurementList.lst.remove(currentMeasurement())
+    N = len(measurementList)
+    if not N: measurementIndex = -1
     else:
-        imageListIndex -= 1
-    imageChanged()
+        measurementIndex -= 1
+    measurementChanged()
     
-def nImage():
-    global imageList
-    return len(imageList)
+def nMeasurement():
+    global measurementList
+    return len(measurementList)
 
-
-
-def newImage():
-    addImage(M6Pupill.fromCcd())
+def newMeasurement():
+    addMeasurement(Image.fromCcd())
     
-def addImage(img):
-    global imageList, imageListIndex
-    imageList.append(img)
-    imageListIndex = nImage()-1
-    imageChanged()
+def addMeasurement(img):
+    global measurementList, measurementIndex
+    measurementList.append(img)
+    measurementIndex = nMeasurement()-1
+    measurementChanged()
     
-def replaceImage(img):
-    global imageList, imageListIndex
-    imageListIndex = imageList.replace(img)    
-    imageChanged()
+def replaceMeasurement(img):
+    global measurementList, measurementIndex
+    measurementIndex = measurementList.replace(img)    
+    measurementChanged()
 
-def addTmpImage():
-    global imageList, tmpImage
-    if tmpImage is not None:
-        if tmpImage not in imageList.lst:
-            addImage(tmpImage)
+def addImageToMeasurement():
+    global measurementList, image
+    if image is not None:
+        if image not in measurementList.lst:
+            addMeasurement(image)
 
 def replaceTmpImage():
-    global imageList, tmpImage
-    if tmpImage is not None:
-        if tmpImage not in imageList.lst:
-            replaceImage(tmpImage)
+    global measurementList, image
+    if image is not None:
+        if image not in measurementList.lst:
+            replaceMeasurement(image)
             
-def setImageList(lst, index=None):
-    global imageList, imageListIndex
-    imageList = lst
-    imageListIndex = len(imageList)-1    
+def setMeasurementList(lst, index=None):
+    global measurementList, measurementIndex
+    measurementList = lst
+    measurementIndex = len(measurementList)-1    
+    measurementChanged()
+
+def grabImage():
+    global image
+    image = Image.fromCcd()
     imageChanged()
-
-def newTmpImage():
-    global tmpImage
-    tmpImage = M6Pupill.fromCcd()
-    tmpImageChanged()
     
-def getTmpImage():
-    global tmpImage
-    return  tmpImage
+def getImage():
+    global image
+    return image
 
-def setTmpImage(img):
-    global tmpImage
-    tmpImage = img
-    tmpImageChanged()
+def setImage(img):
+    global image
+    image = img
+    imageChanged()

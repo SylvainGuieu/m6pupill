@@ -5,7 +5,7 @@ import matplotlib
 import numpy as np
 matplotlib.use('TkAgg')
 from . import plot
-from .pupill import M6PupillList,  M6Pupill
+from .image import ImageList,  Image
 from . import run, io
 from .api import *
 from . import cmd
@@ -35,7 +35,7 @@ def stopExpo():
     guiConfig['expoRunning'] = False
 
     
-def imageChangedGui(lst, current):    
+def measurementChangedGui(lst, current):    
     N = len(lst)
     if N:
         plot.runPlot(lst, current)
@@ -44,11 +44,11 @@ def imageChangedGui(lst, current):
 def tmpImageChangeGui(img):
     if img is None: return
     fig = plot.plt.figure(plot.TMPFIG); fig.clear()    
-    plot.plotPupillCut(img, getImageList(), fig=fig)
+    plot.plotPupillCut(img, getMeasurementList(), fig=fig)
     plot.showfig(fig)
-    if len(getImageList())>1:
+    if len(getMeasurementList())>1:
         fig = plot.plt.figure(plot.ALIGNFIG); fig.clear() 
-        plot.plotAlign(img, getImageList(), fig=fig)
+        plot.plotAlign(img, getMeasurementList(), fig=fig)
         plot.showfig(fig)
     
 
@@ -139,7 +139,7 @@ def newEntry(master, label, setFunc, getFunc,  unit="", dtype=float, row=0, mode
     else:
         raise ValueError('unknown mode %s must be "auto", "return", or "set"'%mode)
     
-    return svout
+    return svout, svin, entry
 
 clockVars = {}
 def addToClock(var, getFunc):        
@@ -159,24 +159,20 @@ class ComputingFrame(Frame):
         def changeParam(f):
             def change(val):
                 f(val)
+                measurementChanged()
                 imageChanged()
-                tmpImageChanged()
             return change
         
         
         f1 = Frame(self)
         
-        R=0    
-        addToClock(
-            newEntry(f1, "Treshold", changeParam(config.setTreshold), config.getTreshold, "", float, R),
-             config.getTreshold
-        )
+        R=0
+        tresholdOutVar, tresholdInVar, _  = newEntry(f1, "Treshold", changeParam(config.setTreshold), config.getTreshold, "", float, R)
+        addToClock(tresholdOutVar, config.getTreshold)
         
         R += 1
-        addToClock(
-            newEntry(f1, "Box x0 y0 W H", changeParam(config.setBox), getBoxCorner, "", parseBoxCorner, R),
-            getBoxCorner
-        )
+        boxOutVar, boxInVar, _ = newEntry(f1, "Box x0 y0 W H", changeParam(config.setBox), getBoxCorner, "", parseBoxCorner, R)
+        addToClock(boxOutVar, getBoxCorner)
         
         R += 2
         options = ['Image Beacon', 'Pupill Beacon', 'M6 mirror']
@@ -190,9 +186,11 @@ class ComputingFrame(Frame):
                 config.setCenterMode(config.M2BEACONMODE)
             else:
                 config.setCenterMode(config.BEACONMODE)                
+            measurementChanged()
             imageChanged()
-            tmpImageChanged()
             runClock()
+            boxInVar.set(getBoxCorner())
+            tresholdInVar.set(config.getTreshold())
         
         def getMode(options=options):
             m = config.getCenterMode()
@@ -205,6 +203,7 @@ class ComputingFrame(Frame):
         
         optionVar.set(getMode())        
         optionVar.trace('w', setMode)
+        addToClock(optionVar, getMode)
         
         OptionMenu(self,optionVar, *options).pack(side=TOP)
         f1.pack(side=TOP)
@@ -217,11 +216,11 @@ class SetupFrame(Frame):
         R = 0
         
         R += 1
-        derotVar = newEntry(f1, "Derot (degree)", cmd.moveDerot, cmd.getDerotPos, "", float, R, mode="set", default=0.0)
+        derotVar,_,_ = newEntry(f1, "Derot (degree)", cmd.moveDerot, cmd.getDerotPos, "", float, R, mode="set", default=0.0)
         addToClock(derotVar,cmd.getDerotPos)
 
         R += 1
-        azVar= newEntry(f1, "Az (degree)", cmd.moveAz, cmd.getAzPos, "", float, R, mode="set", default=0.0)
+        azVar, _, _= newEntry(f1, "Az (degree)", cmd.moveAz, cmd.getAzPos, "", float, R, mode="set", default=0.0)
         addToClock(azVar, cmd.getAzPos)
 
         Label(self, text="Setup").pack(side=TOP)
@@ -254,26 +253,26 @@ class ImageFrame(Frame):
         Frame.__init__(self, master, **kwargs)
                 
         counterVar = StringVar(self)
-        counterVar.set(str(nImage()))
+        counterVar.set(str(nMeasurement()))
 
         indexVar = StringVar(self)
         indexVar.set(str(getIndex()+1))
-        addToClock(counterVar, lambda self=self:  str(nImage()))
+        addToClock(counterVar, lambda self=self:  str(nMeasurement()))
         addToClock(indexVar  , lambda self=self:  str(getIndex()+1))
         
             
         azVar = StringVar(self)
-        fc = lambda self=self: getKeyStr(currentImage(), "az")
+        fc = lambda self=self: getKeyStr(currentMeasurement(), "az")
         azVar.set(fc())
         addToClock(azVar, fc)
         
         derotVar = StringVar(self)
-        fc = lambda self=self: getKeyStr(currentImage(), "derot")
+        fc = lambda self=self: getKeyStr(currentMeasurement(), "derot")
         derotVar.set(fc())
         addToClock(derotVar, fc)
         
         #centerVar = StringVar(self)                    
-        #fc = lambda self=self: getCenterStr(currentImage())
+        #fc = lambda self=self: getCenterStr(currentMeasurement())
         #centerVar.set(fc())        
         #addToClock(centerVar, fc)
 
@@ -286,16 +285,16 @@ class ImageFrame(Frame):
 
         
         f1 = Frame(self)                                    
-        Button(f1, text="Add", width=10, command=addTmpImage).pack(side=LEFT,  padx=PX)
+        Button(f1, text="Add", width=10, command=addImageToMeasurement).pack(side=LEFT,  padx=PX)
         Button(f1, text="Replace", width=10, command=replaceTmpImage).pack(side=LEFT, padx=PX)
         
         
         f2 = Frame(self)
         f22 = Frame(self)
-        Button(f22, text="Prev", width=10, command=previousImage).pack(side=LEFT, padx=PX)
-        Button(f22, text="Next", width=10, command=nextImage).pack(side=LEFT, padx=PX)
-        Button(f2, text="Remove", width=10, command=removeImage).pack(side=LEFT, padx=PX)
-        Button(f2, text="Save",width=10, command=saveImage).pack(side=LEFT, padx=PX)
+        Button(f22, text="Prev", width=10, command=previousMeasurement).pack(side=LEFT, padx=PX)
+        Button(f22, text="Next", width=10, command=nextMeasurement).pack(side=LEFT, padx=PX)
+        Button(f2, text="Remove", width=10, command=removeMeasurement).pack(side=LEFT, padx=PX)
+        Button(f2, text="Save",width=10, command=saveMeasurement).pack(side=LEFT, padx=PX)
         Button(f2, text="Save All",width=10, command=saveAll).pack(side=LEFT, padx=PX)
         
         
@@ -318,7 +317,7 @@ class ImageFrame(Frame):
         lb = Listbox(self, selectmode=SINGLE, height=5, width=40)
         def updatelb(*a, lb=lb):
             lb.delete(0, lb.size())
-            for i,p in enumerate(getImageList(), start=1):
+            for i,p in enumerate(getMeasurementList(), start=1):
                 if p.file:
                     _, file = os.path.split(p.file)
                 else:
@@ -329,16 +328,16 @@ class ImageFrame(Frame):
         def onSelected(*a, lb=lb):
             selected = lb.get(lb.curselection())
             strnum, _, _ = selected.strip().partition(" ")
-            selectImage(int(strnum)-1)
+            selectMeasurement(int(strnum)-1)
         
         lb.bind('<<ListboxSelect>>', onSelected)
         lb.pack(side=TOP)
-        addImageChangedTrace(updatelb)
-        imageChanged()
+        addMeasurementChangedTrace(updatelb)
+        measurementChanged()
         
         
     def replot(self):
-        imageChanged()        
+        measurementChanged()        
 
 
 class RunFrame(Frame):
@@ -396,24 +395,24 @@ class RunFrame(Frame):
             log("rotating to Derotator %.1f "%angle, end="...")
             cmd.moveDerot(angle)
             log ("ok")            
-            newTmpImage()
-            addTmpImage()
+            grabImage()
+            addImageToMeasurement()
             if config.autoSaveImage:
-                log("image saved", io.savePup(currentImage()))
+                log("image saved", io.saveImage(currentMeasurement()))
     
     def runAz(self):
         log = print
         current = cmd.getAzPos()
-        angles = np.linspace(current, 360+current, int(360/self.azStep)+1)[:-1]
+        angles  = np.linspace(current, 360+current, int(360/self.azStep)+1)[:-1]
         stopExpo()
         for angle in angles:
             log("rotating to Azimuth %.1f "%angle, end="...")
             cmd.moveAz(angle)
             log ("ok")
-            newTmpImage()
-            addTmpImage()
+            grabImage()
+            addImageToMeasurement()
             if config.autoSaveImage:
-                log("image saved", io.savePup(currentImage()))
+                log("image saved", io.saveImage(currentMeasurement()))
                     
     
     
@@ -445,7 +444,7 @@ def clock():
     global root
     runClock()
     if guiConfig['expoRunning']:        
-        newTmpImage()
+        grabImage()
         if not guiConfig['expoMode']=="forever": guiConfig['expoRunning'] = False
         
     
@@ -454,12 +453,12 @@ def clock():
 def main(files=[]):  
     global root, refreshState
     refreshState = False
-    addImageChangedTrace(imageChangedGui)
-    addTmpImageTrace(tmpImageChangeGui)
+    addMeasurementChangedTrace(measurementChangedGui)
+    addNewImageTrace(tmpImageChangeGui)
     
-    lst = M6PupillList([M6Pupill(file=file) for file  in files])
+    lst = ImageList([Image(file=file) for file  in files])
         
-    setImageList(lst)
+    setMeasurementList(lst)
     
     root = Tk()   
     root.protocol("WM_DELETE_WINDOW", _delete_window)

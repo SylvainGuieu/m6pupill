@@ -2,11 +2,13 @@
 import re
 import os
 import numpy as np
+import time
 
 from . import compute 
 from . import io
 from . import config
 from . import cmd
+
 
 from scipy.ndimage.interpolation import shift
 import glob
@@ -141,71 +143,16 @@ class Image:
         return Image(data=newData, header=dict(self.header))             
     
 class ImageList:
+    
     def __init__(self, iterable):
         self.lst = list(iterable)
-        
+            
     def append(self, p):
         self.lst.append(p)
-
+    
     def appendFromCcd(self, header=None):
         self.append(Image.fromCcd(header=header))
-
-    def askNew(self,  az=None, derot=None):
-        
-        if not len(self) or self[-1].at<1:
-            atnum = input('at number = ').strip()
-            if atnum=="q":
-                return False
-            try:
-                at =int(atnum)
-            except Exception:
-                print ('what ?')
-                return self.askNew(az=az,derot=derot)            
-
-            
-        else:
-            at = self[-1].at
-
-        
-        if az is  None  and derot is None:
-            newdef = input('az derot (q to quit)= ').strip()
-            if newdef =="q":
-                return False
-        
-            strval = [s.strip() for s in newdef.split(" ")]
-            if len(strval)!=2:
-                print('what ?')
-                return  self.askNew(az=az,derot=derot)
-            else:
-                self.appendFromCcd(header={'az':float(strval[0]), 'derot':float(strval[1]), 'at':at})
-        elif az is None:
-           newdef = input('az (q to quit)= ').strip()
-           if newdef =="q":
-                return False
-           strval = [s.strip() for s in newdef.split(" ")]
-           if len(strval)!=1:
-                print('what ?')
-                return  self.askNew(az=az,derot=derot)
-           else:
-                self.appendFromCcd(header={'az':float(strval[0]), 'derot':derot, 'at':at}) 
-        elif derot is None:
-           newdef = input('derot (q to quit)= ').strip()
-           if newdef =="q":
-                return False
-           strval = [s.strip() for s in newdef.split(" ")]
-           if len(strval)!=1:
-                print('what ?')
-                return  self.askNew(az=az,derot=derot)
-           else:
-                self.appendFromCcd(header={'derot':float(strval[0]), 'derot':az, 'at':at})
-        else:
-            newdef = input('q to quit enter to take new expo ').strip()
-            if newdef =="q":
-                return False
-            else:
-                self.appendFromCcd(header={'derot':derot, 'derot':az, 'at':at})
-        return True
-        
+    
     def extend(self, iterable):
         self.lst.extend(iterable)
         
@@ -260,6 +207,11 @@ class ImageList:
     
     def getCenters(self):
         return np.array([p.getCenter() for p in self])
+    
+    def getTable(self):
+        header = "#{N:3s} {az:6s} {derot:6s}".format(N="N", az="Az", derot="derot")
+        tbl = ["{N:4d} {p.az:6.1f} {p.derot:6.1f}".format(N=i, p=p) for i,p in enumerate(self)]
+        return header, tbl
     
     def __iter__(self):
          return self.lst.__iter__()
