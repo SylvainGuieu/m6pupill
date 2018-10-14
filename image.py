@@ -99,8 +99,9 @@ class Image:
         if self.centerMode == config.M6MODE:
             return compute.pupillCenter(self.getMask())
         else:
-            img, offset = self.getSubImage()            
-            return compute.spotCenter(img, offset)
+            img, offset = self.getSubImage()
+            mask, _ = self.getSubMask()
+            return compute.spotCenter(img*mask, offset)
     
     def getSubImage(self):        
         (x0,y0),(x1,y1) = self.boxLocation

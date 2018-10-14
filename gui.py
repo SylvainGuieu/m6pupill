@@ -188,9 +188,7 @@ class ComputingFrame(Frame):
                 config.setCenterMode(config.BEACONMODE)                
             measurementChanged()
             imageChanged()
-            runClock()
-            boxInVar.set(getBoxCorner())
-            tresholdInVar.set(config.getTreshold())
+            runClock()            
         
         def getMode(options=options):
             m = config.getCenterMode()
